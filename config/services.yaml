@@ -1,0 +1,42 @@
+network:
+  host: "0.0.0.0"
+  port: 30490
+  sd:
+    multicast_address: "239.255.255.251"
+    multicast_port: 30490
+    cyclic_offer_delay_ms: 5000
+
+services:
+  lighting:
+    service_id: 0x1000
+    instance_id: 0x0001
+    methods:
+      set_light_state: 0x0001
+      get_light_status: 0x0002
+    events:
+      light_status_changed: 0x8001
+    eventgroups:
+      lighting_events: 0x0001
+
+  door_lock:
+    service_id: 0x1001
+    instance_id: 0x0001
+    methods:
+      lock: 0x0001
+      unlock: 0x0002
+      get_status: 0x0003
+    events:
+      lock_state_changed: 0x8001
+    eventgroups:
+      door_events: 0x0001
+
+  vehicle_mode:
+    service_id: 0x1002
+    instance_id: 0x0001
+    fields:
+      mode:
+        getter: 0x0001
+        setter: 0x0002
+        notifier: 0x8001
+    eventgroups:
+      mode_events: 0x0001

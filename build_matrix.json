@@ -1,0 +1,4 @@
+[
+  { "board": "native_sim", "runner": "ubuntu-22.04" },
+  { "board": "nucleo_h755zi_q/stm32h755xx/m7", "runner": "ubuntu-22.04" }
+]

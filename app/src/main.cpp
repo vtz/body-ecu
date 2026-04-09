@@ -1,0 +1,156 @@
+#include <zephyr/kernel.h>
+#include <zephyr/logging/log.h>
+
+LOG_MODULE_REGISTER(body_ecu, LOG_LEVEL_INF);
+
+#ifdef CONFIG_GPIO
+#include <zephyr/drivers/gpio.h>
+#endif
+
+#ifdef CONFIG_CAN
+#include <zephyr/drivers/can.h>
+#endif
+
+#include "CanGatewaySystem.h"
+#include "DiagnosticsSystem.h"
+#include "DoCanTransport.h"
+#include "DoIpTransport.h"
+#include "DoorLockSystem.h"
+#include "LightingSystem.h"
+#include "SomeIpSystem.h"
+#include "VehicleModeSystem.h"
+
+#ifdef CONFIG_GPIO
+#include "zephyr_adapters/ButtonAdapter.h"
+#include "zephyr_adapters/CanAdapter.h"
+#include "zephyr_adapters/GpioAdapter.h"
+#endif
+
+using namespace body_ecu;
+
+int main(void)
+{
+    LOG_INF("Body ECU starting");
+    LOG_INF("Platform: %s", CONFIG_BOARD);
+
+    // --- SOME/IP transport ---
+    adapters::SomeIpConfig someip_cfg{.host = "0.0.0.0", .port = 30490};
+    adapters::SomeIpSystem someip_system(someip_cfg);
+
+#ifdef CONFIG_GPIO
+    // --- GPIO adapter (on-board LEDs: LD1=green, LD2=yellow, LD3=red) ---
+    static const struct gpio_dt_spec leds[] = {
+        GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios, {0}),
+        GPIO_DT_SPEC_GET_OR(DT_ALIAS(led1), gpios, {0}),
+        GPIO_DT_SPEC_GET_OR(DT_ALIAS(led2), gpios, {0}),
+    };
+
+    std::vector<adapters::GpioAdapter::PinMapping> pin_map;
+    for (const auto& led : leds) {
+        pin_map.push_back({led.port, led.pin, GPIO_ACTIVE_HIGH});
+    }
+    adapters::GpioAdapter gpio_adapter(pin_map);
+    gpio_adapter.configure();
+
+    // --- Button adapter (user button) ---
+    static const struct gpio_dt_spec user_btn =
+        GPIO_DT_SPEC_GET_OR(DT_ALIAS(sw0), gpios, {0});
+    adapters::ButtonAdapter button_adapter(user_btn.port, user_btn.pin);
+    button_adapter.configure();
+#endif
+
+#ifdef CONFIG_CAN
+    // --- CAN adapter ---
+    const struct device* can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
+    adapters::CanAdapter can_adapter(can_dev);
+    can_adapter.configure();
+#endif
+
+    // --- Lifecycle systems ---
+#ifdef CONFIG_GPIO
+    adapters::LightingSystem lighting(gpio_adapter, someip_system);
+    adapters::DoorLockSystem door_lock(gpio_adapter, button_adapter,
+                                       someip_system);
+#endif
+    adapters::VehicleModeSystem vehicle_mode(someip_system);
+
+#ifdef CONFIG_CAN
+    adapters::CanGatewaySystem can_gateway(can_adapter, someip_system);
+
+    platform::ServiceMapping light_gw;
+    light_gw.name = "light_command";
+    light_gw.direction = platform::GatewayDirection::SomeIpToCan;
+    light_gw.someip_service_id = 0x1000;
+    light_gw.someip_method_id = 0x0001;
+    light_gw.can_id = 0x200;
+    light_gw.can_dlc = 4;
+    can_gateway.addMapping(light_gw);
+
+    platform::ServiceMapping door_gw;
+    door_gw.name = "door_status";
+    door_gw.direction = platform::GatewayDirection::CanToSomeIp;
+    door_gw.someip_service_id = 0x1001;
+    door_gw.someip_event_id = 0x8001;
+    door_gw.someip_eventgroup_id = 0x0001;
+    door_gw.can_id = 0x300;
+    door_gw.can_dlc = 2;
+    can_gateway.addMapping(door_gw);
+#endif
+
+    // --- Diagnostics (dual transport: DoIP + DoCAN) ---
+    adapters::DiagnosticsSystem diagnostics;
+    adapters::DoIpTransport doip_transport;
+#ifdef CONFIG_CAN
+    adapters::DoCanTransport docan_transport(can_adapter);
+    diagnostics.addTransport(&docan_transport);
+#endif
+    diagnostics.addTransport(&doip_transport);
+
+#ifdef CONFIG_GPIO
+    diagnostics.addProvider(&lighting.controller());
+    diagnostics.addProvider(&door_lock.controller());
+#endif
+
+    // --- Wire cross-service observers ---
+#ifdef CONFIG_GPIO
+    vehicle_mode.manager().addObserver(&lighting.controller());
+    vehicle_mode.manager().addObserver(&door_lock.controller());
+#endif
+
+    // --- Init phase ---
+    LOG_INF("Initializing systems...");
+    someip_system.init();
+#ifdef CONFIG_GPIO
+    lighting.init();
+    door_lock.init();
+#endif
+    vehicle_mode.init();
+#ifdef CONFIG_CAN
+    can_gateway.init();
+#endif
+    diagnostics.init();
+    doip_transport.init();
+#ifdef CONFIG_CAN
+    docan_transport.init();
+#endif
+
+    // --- Run phase ---
+    LOG_INF("Starting systems...");
+    someip_system.run();
+#ifdef CONFIG_GPIO
+    lighting.run();
+    door_lock.run();
+#endif
+    vehicle_mode.run();
+#ifdef CONFIG_CAN
+    can_gateway.run();
+#endif
+    diagnostics.run();
+
+    LOG_INF("Body ECU ready - all systems running");
+
+    // Zephyr main thread yields; all work is event-driven via
+    // SOME/IP method callbacks, CAN RX interrupts, button ISR,
+    // and diagnostic transport handlers.
+    return 0;
+}

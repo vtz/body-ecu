@@ -1,0 +1,19 @@
+mappings:
+  - name: "light_command"
+    direction: someip_to_can
+    someip:
+      service_id: 0x1000
+      method_id: 0x0001
+    can:
+      id: 0x200
+      dlc: 4
+
+  - name: "door_status"
+    direction: can_to_someip
+    can:
+      id: 0x300
+      dlc: 2
+    someip:
+      service_id: 0x1001
+      event_id: 0x8001
+      eventgroup_id: 0x0001

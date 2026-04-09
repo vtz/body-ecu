@@ -1,0 +1,16 @@
+build/
+*.o
+*.a
+*.so
+*.dylib
+compile_commands.json
+.cache/
+__pycache__/
+*.pyc
+.vscode/
+.idea/
+*.swp
+*~
+test-results.xml
+coverage.html
+coverage.xml

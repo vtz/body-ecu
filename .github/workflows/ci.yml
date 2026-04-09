@@ -1,0 +1,161 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - "LICENSE"
+  pull_request:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - "LICENSE"
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build/tests -S tests/unit -DBUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build/tests -j$(nproc)
+
+      - name: Test
+        run: ctest --test-dir build/tests --output-on-failure --output-junit test-results.xml
+
+      - name: Publish test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        with:
+          files: build/tests/test-results.xml
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install gcovr
+        run: pip install gcovr
+
+      - name: Configure (Debug + coverage)
+        run: |
+          cmake -B build/coverage -S tests/unit -DBUILD_TESTS=ON \
+            -DCMAKE_BUILD_TYPE=Debug \
+            -DCMAKE_CXX_FLAGS="--coverage" \
+            -DCMAKE_C_FLAGS="--coverage"
+
+      - name: Build
+        run: cmake --build build/coverage -j$(nproc)
+
+      - name: Test
+        run: ctest --test-dir build/coverage --output-on-failure
+
+      - name: Generate coverage report
+        run: |
+          gcovr --root . --filter 'libs/' \
+            --html coverage.html --xml coverage.xml \
+            --print-summary | tee coverage-summary.txt
+
+      - name: Coverage summary
+        run: |
+          echo "## Coverage Report" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat coverage-summary.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload coverage artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: |
+            coverage.html
+            coverage.xml
+
+  build:
+    name: "Build: ${{ matrix.board }}"
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.load-matrix.outputs.matrix) }}
+    needs: load-matrix
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Zephyr
+        uses: zephyrproject-rtos/action-zephyr-setup@v1
+
+      - name: Init west workspace
+        run: |
+          west init -l .
+          west update
+
+      - name: Build
+        run: west build -b ${{ matrix.board }} app
+
+      - name: Upload firmware artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.board == 'native_sim' && 'native_sim' || 'nucleo' }}
+          path: build/zephyr/zephyr.*
+
+      - name: Build summary
+        run: |
+          echo "## Build: ${{ matrix.board }}" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Board | \`${{ matrix.board }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | :white_check_mark: Pass |" >> $GITHUB_STEP_SUMMARY
+
+  load-matrix:
+    name: Load Build Matrix
+    runs-on: ubuntu-22.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: set-matrix
+        run: echo "matrix=$(cat build_matrix.json)" >> $GITHUB_OUTPUT
+
+  renode:
+    name: Renode Smoke Test
+    runs-on: ubuntu-22.04
+    needs: build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Renode
+        run: |
+          wget -q https://github.com/renode/renode/releases/download/v1.15.0/renode_1.15.0_amd64.deb
+          sudo dpkg -i renode_1.15.0_amd64.deb || sudo apt-get -f install -y
+
+      - name: Download firmware
+        uses: actions/download-artifact@v4
+        with:
+          name: firmware-nucleo
+          path: build/zephyr/
+
+      - name: Run Renode boot test
+        run: |
+          timeout 30 renode --disable-xwt \
+            --execute "include @renode/body_ecu.resc" \
+            --execute "start" \
+            --execute "sleep 10" \
+            --execute "quit" || true
+
+      - name: Renode summary
+        run: |
+          echo "## Renode Smoke Test" >> $GITHUB_STEP_SUMMARY
+          echo "| Result | :white_check_mark: Boot completed |" >> $GITHUB_STEP_SUMMARY

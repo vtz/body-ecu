@@ -1,0 +1,37 @@
+manifest:
+  remotes:
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
+    - name: eclipse-openbsw
+      url-base: https://github.com/eclipse-openbsw
+    - name: vtz
+      url-base: https://github.com/vtz
+
+  projects:
+    - name: zephyr
+      remote: zephyrproject-rtos
+      revision: ea6eade52b595b064af8bc232d26dc3b67eb9a6d
+      import:
+        name-allowlist:
+          - cmsis
+          - cmsis_6
+          - hal_stm32
+          - net-tools
+          - segger
+
+    - name: openbsw
+      remote: eclipse-openbsw
+      revision: 82397e004ee1d8bd38426c5d25239bf986146ce5
+
+    - name: openbsw-zephyr
+      remote: eclipse-openbsw
+      revision: main
+      path: modules/openbsw-zephyr
+
+    - name: opensomeip
+      remote: vtz
+      revision: v0.0.5
+      path: modules/opensomeip
+
+  self:
+    path: body-ecu
