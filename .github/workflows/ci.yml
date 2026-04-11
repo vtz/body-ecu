@@ -129,6 +129,33 @@ jobs:
       - id: set-matrix
         run: echo "matrix=$(cat build_matrix.json)" >> $GITHUB_OUTPUT
 
+  posix-build:
+    name: "Build: POSIX (Linux)"
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build/posix -S platforms/posix
+
+      - name: Build
+        run: cmake --build build/posix -j$(nproc)
+
+      - name: Upload POSIX binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: body-ecu-posix
+          path: build/posix/body_ecu_posix
+
+      - name: Build summary
+        run: |
+          echo "## Build: POSIX (Linux)" >> $GITHUB_STEP_SUMMARY
+          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Platform | Linux/POSIX |" >> $GITHUB_STEP_SUMMARY
+          echo "| Binary | \`body_ecu_posix\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Status | :white_check_mark: Pass |" >> $GITHUB_STEP_SUMMARY
+
   renode:
     name: Renode Smoke Test
     runs-on: ubuntu-22.04

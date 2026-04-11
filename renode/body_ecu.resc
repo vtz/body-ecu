@@ -6,10 +6,10 @@ using sysbus
 mach create "body_ecu"
 machine LoadPlatformDescription @platforms/boards/nucleo_h753zi.repl
 
-showAnalyzer uart3
+showAnalyzer usart3
 
 macro reset
 """
-    sysbus LoadELF @build/zephyr/zephyr.elf
+    sysbus LoadELF @build/renode/zephyr/zephyr.elf
 """
 runMacro $reset

@@ -33,4 +33,6 @@ target_link_libraries(app PRIVATE
     vehicle_mode
     can_gateway
     diagnostics
+    adapters_zephyr
+    adapters_openbsw
 )

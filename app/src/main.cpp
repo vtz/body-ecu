@@ -1,5 +1,6 @@
 #include <zephyr/kernel.h>
 #include <zephyr/logging/log.h>
+#include <optional>
 
 LOG_MODULE_REGISTER(body_ecu, LOG_LEVEL_INF);
 
@@ -50,13 +51,18 @@ int main(void)
         pin_map.push_back({led.port, led.pin, GPIO_ACTIVE_HIGH});
     }
     adapters::GpioAdapter gpio_adapter(pin_map);
-    gpio_adapter.configure();
+    bool gpio_ok = gpio_adapter.configure();
 
     // --- Button adapter (user button) ---
     static const struct gpio_dt_spec user_btn =
         GPIO_DT_SPEC_GET_OR(DT_ALIAS(sw0), gpios, {0});
     adapters::ButtonAdapter button_adapter(user_btn.port, user_btn.pin);
-    button_adapter.configure();
+    if (gpio_ok) {
+        button_adapter.configure();
+    }
+    if (!gpio_ok) {
+        LOG_WRN("GPIO not available -- lighting/door-lock disabled (emulation?)");
+    }
 #endif
 
 #ifdef CONFIG_CAN
@@ -68,9 +74,12 @@ int main(void)
 
     // --- Lifecycle systems ---
 #ifdef CONFIG_GPIO
-    adapters::LightingSystem lighting(gpio_adapter, someip_system);
-    adapters::DoorLockSystem door_lock(gpio_adapter, button_adapter,
-                                       someip_system);
+    std::optional<adapters::LightingSystem> lighting;
+    std::optional<adapters::DoorLockSystem> door_lock;
+    if (gpio_ok) {
+        lighting.emplace(gpio_adapter, someip_system);
+        door_lock.emplace(gpio_adapter, button_adapter, someip_system);
+    }
 #endif
     adapters::VehicleModeSystem vehicle_mode(someip_system);
 
@@ -107,22 +116,20 @@ int main(void)
     diagnostics.addTransport(&doip_transport);
 
 #ifdef CONFIG_GPIO
-    diagnostics.addProvider(&lighting.controller());
-    diagnostics.addProvider(&door_lock.controller());
-#endif
-
-    // --- Wire cross-service observers ---
-#ifdef CONFIG_GPIO
-    vehicle_mode.manager().addObserver(&lighting.controller());
-    vehicle_mode.manager().addObserver(&door_lock.controller());
+    if (lighting && door_lock) {
+        diagnostics.addProvider(&lighting->controller());
+        diagnostics.addProvider(&door_lock->controller());
+        vehicle_mode.manager().addObserver(&lighting->controller());
+        vehicle_mode.manager().addObserver(&door_lock->controller());
+    }
 #endif
 
     // --- Init phase ---
     LOG_INF("Initializing systems...");
     someip_system.init();
 #ifdef CONFIG_GPIO
-    lighting.init();
-    door_lock.init();
+    if (lighting) lighting->init();
+    if (door_lock) door_lock->init();
 #endif
     vehicle_mode.init();
 #ifdef CONFIG_CAN
@@ -138,8 +145,8 @@ int main(void)
     LOG_INF("Starting systems...");
     someip_system.run();
 #ifdef CONFIG_GPIO
-    lighting.run();
-    door_lock.run();
+    if (lighting) lighting->run();
+    if (door_lock) door_lock->run();
 #endif
     vehicle_mode.run();
 #ifdef CONFIG_CAN
@@ -149,8 +156,6 @@ int main(void)
 
     LOG_INF("Body ECU ready - all systems running");
 
-    // Zephyr main thread yields; all work is event-driven via
-    // SOME/IP method callbacks, CAN RX interrupts, button ISR,
-    // and diagnostic transport handlers.
+    k_sleep(K_FOREVER);
     return 0;
 }

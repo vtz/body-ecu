@@ -21,7 +21,7 @@ The project follows a **hexagonal (ports & adapters)** architecture:
 | Port interfaces | `libs/platform/ports/` | Abstract C++ interfaces (no deps) |
 | Domain logic | `libs/body/` | Portable business logic (lighting, door-lock, vehicle-mode) |
 | ECU-generic | `libs/platform/` | Reusable modules (config-loader, can-gateway, diagnostics) |
-| Adapters | `libs/adapters/` | Platform-specific (Zephyr GPIO, OpenBSW lifecycle) |
+| Adapters | `libs/adapters/` | Platform-specific (Zephyr, Linux, OpenBSW lifecycle) |
 
 Domain modules depend **only** on port interfaces and can be tested on any host or migrated
 to an HPC (MPU) by swapping adapters.
@@ -42,14 +42,24 @@ west init -l .
 west update
 ```
 
-### Build for native_sim
+### Build for POSIX (Linux/macOS -- no Zephyr required)
+
+```bash
+cmake -B build/posix -S platforms/posix
+cmake --build build/posix
+./build/posix/body_ecu_posix [vcan0]
+```
+
+Uses real sockets for SOME/IP, SocketCAN for CAN, console for GPIO, and stdin for button input.
+
+### Build for native_sim (Zephyr simulation)
 
 ```bash
 west build -b native_sim app
 west build -t run
 ```
 
-### Build for NUCLEO-H755ZI-Q
+### Build for NUCLEO-H755ZI-Q (hardware)
 
 ```bash
 west build -b nucleo_h755zi_q/stm32h755xx/m7 app

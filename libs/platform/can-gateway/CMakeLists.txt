@@ -1,9 +1,13 @@
-add_library(can_gateway STATIC
-    src/CanGateway.cpp
-    src/MessageTranslator.cpp
-)
-target_include_directories(can_gateway PUBLIC include)
-target_link_libraries(can_gateway PUBLIC ports)
+if(ZEPHYR_BASE)
+    zephyr_library_named(can_gateway)
+    zephyr_library_sources(src/CanGateway.cpp src/MessageTranslator.cpp)
+    zephyr_library_link_libraries(ports)
+    target_include_directories(can_gateway PUBLIC include)
+else()
+    add_library(can_gateway STATIC src/CanGateway.cpp src/MessageTranslator.cpp)
+    target_include_directories(can_gateway PUBLIC include)
+    target_link_libraries(can_gateway PUBLIC ports)
+endif()
 
 if(BUILD_TESTS)
     add_subdirectory(tests)

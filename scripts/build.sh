@@ -1,8 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-BOARD="${1:-native_sim}"
+TARGET="${1:-native_sim}"
 
-echo "=== Building Body ECU for ${BOARD} ==="
-west build -b "${BOARD}" app -- -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
-echo "=== Build complete ==="
+case "${TARGET}" in
+    posix|linux)
+        echo "=== Building Body ECU for POSIX (Linux) ==="
+        cmake -B build/posix -S platforms/posix
+        cmake --build build/posix -j"$(nproc 2>/dev/null || sysctl -n hw.ncpu)"
+        echo "=== Build complete: build/posix/body_ecu_posix ==="
+        ;;
+    *)
+        echo "=== Building Body ECU for ${TARGET} (Zephyr) ==="
+        west build -b "${TARGET}" app -- -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+        echo "=== Build complete ==="
+        ;;
+esac

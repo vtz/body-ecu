@@ -1,9 +1,13 @@
-add_library(diagnostics STATIC
-    src/UdsServiceHandler.cpp
-    src/DtcStore.cpp
-)
-target_include_directories(diagnostics PUBLIC include)
-target_link_libraries(diagnostics PUBLIC ports)
+if(ZEPHYR_BASE)
+    zephyr_library_named(diagnostics)
+    zephyr_library_sources(src/UdsServiceHandler.cpp src/DtcStore.cpp)
+    zephyr_library_link_libraries(ports)
+    target_include_directories(diagnostics PUBLIC include)
+else()
+    add_library(diagnostics STATIC src/UdsServiceHandler.cpp src/DtcStore.cpp)
+    target_include_directories(diagnostics PUBLIC include)
+    target_link_libraries(diagnostics PUBLIC ports)
+endif()
 
 if(BUILD_TESTS)
     add_subdirectory(tests)

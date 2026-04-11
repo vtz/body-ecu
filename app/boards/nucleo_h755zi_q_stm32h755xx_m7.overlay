@@ -1,7 +1,7 @@
 /* Devicetree overlay for NUCLEO-H755ZI-Q (M7 core) */
 /* Enables Ethernet, CAN, user LEDs, and user button */
 
-&eth {
+&mac {
 	status = "okay";
 };
 

@@ -16,6 +16,36 @@ west init -l .
 west update
 ```
 
+## POSIX build (Linux/macOS -- no Zephyr required)
+
+The POSIX build produces a standalone executable that runs directly on
+a Linux or macOS host. It uses real sockets for SOME/IP, SocketCAN for
+CAN, console output for GPIO, and stdin for button input.
+
+```bash
+cmake -B build/posix -S platforms/posix
+cmake --build build/posix
+./build/posix/body_ecu_posix [vcan0]
+```
+
+Or using CMake presets:
+
+```bash
+cd platforms/posix
+cmake --preset posix-debug
+cmake --build --preset posix-debug
+```
+
+### SocketCAN setup (Linux only)
+
+```bash
+sudo modprobe vcan
+sudo ip link add dev vcan0 type vcan
+sudo ip link set up vcan0
+```
+
+Monitor CAN traffic with `candump vcan0` and inject frames with `cansend vcan0 200#DEADBEEF`.
+
 ## Zephyr builds
 
 ### native_sim (host simulation)
