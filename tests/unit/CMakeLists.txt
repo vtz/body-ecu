@@ -57,6 +57,7 @@ add_subdirectory(${LIBS_ROOT}/adapters/openbsw/tests adapters_openbsw_tests)
 add_subdirectory(${LIBS_ROOT}/platform/config-loader config-loader)
 add_subdirectory(${LIBS_ROOT}/platform/can-gateway can-gateway)
 add_subdirectory(${LIBS_ROOT}/platform/diagnostics diagnostics)
+add_subdirectory(${LIBS_ROOT}/platform/cloud-gateway cloud-gateway)
 
 # Body domain modules
 add_subdirectory(${LIBS_ROOT}/body/lighting lighting)
