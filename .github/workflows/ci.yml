@@ -135,26 +135,50 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure
+      - name: Configure (single-process)
         run: cmake -B build/posix -S platforms/posix
 
-      - name: Build
+      - name: Build (single-process)
         run: cmake --build build/posix -j$(nproc)
 
-      - name: Upload POSIX binary
+      - name: Configure (MCU)
+        run: cmake -B build/posix-mcu -S platforms/posix-mcu
+
+      - name: Build (MCU)
+        run: cmake --build build/posix-mcu -j$(nproc)
+
+      - name: Configure (MPU)
+        run: cmake -B build/posix-mpu -S platforms/posix-mpu
+
+      - name: Build (MPU)
+        run: cmake --build build/posix-mpu -j$(nproc)
+
+      - name: Upload POSIX binaries
         uses: actions/upload-artifact@v4
         with:
           name: body-ecu-posix
-          path: build/posix/body_ecu_posix
+          path: |
+            build/posix/body_ecu_posix
+            build/posix-mcu/body_ecu_posix_mcu
+            build/posix-mpu/body_ecu_posix_mpu
 
-      - name: Build summary
-        run: |
-          echo "## Build: POSIX (Linux)" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | Linux/POSIX |" >> $GITHUB_STEP_SUMMARY
-          echo "| Binary | \`body_ecu_posix\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Status | :white_check_mark: Pass |" >> $GITHUB_STEP_SUMMARY
+  autosd-build:
+    name: "Build: AutoSD (MPU)"
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build/autosd -S platforms/autosd
+
+      - name: Build
+        run: cmake --build build/autosd -j$(nproc)
+
+      - name: Upload AutoSD binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: body-ecu-autosd
+          path: build/autosd/body_ecu_autosd
 
   renode:
     name: Renode Smoke Test
