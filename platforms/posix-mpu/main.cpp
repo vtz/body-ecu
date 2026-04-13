@@ -20,6 +20,7 @@ static void signalHandler(int /*sig*/) {
 
 int main(int argc, char* argv[])
 {
+    std::setbuf(stdout, nullptr);
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
 
@@ -30,8 +31,11 @@ int main(int argc, char* argv[])
     std::printf("SOME/IP client connecting to %s:%u\n\n", mcu_host,
                 mcu_port);
 
-    adapters::SomeIpConfig someip_cfg{.host = mcu_host, .port = mcu_port};
+    adapters::SomeIpConfig someip_cfg{
+        .host = mcu_host, .port = mcu_port, .role = adapters::SomeIpRole::Client};
     adapters::SomeIpSystem someip_client(someip_cfg);
+
+    std::printf("Note: MPU is a SOME/IP client. Events from MCU will appear here.\n");
 
     adapters::InProcessSignalBus signal_bus;
     adapters::StubCloudTransport cloud_transport;
@@ -65,6 +69,14 @@ int main(int argc, char* argv[])
 
     std::printf("Starting...\n");
     someip_client.run();
+
+    // Send a GetStatus request to register with the MCU server
+    ports::SomeIpMessage status_req;
+    status_req.service_id = 0x1001;
+    status_req.method_id = 0x0003;  // GetStatus
+    status_req.message_type = 0x00; // REQUEST
+    someip_client.sendResponse(status_req);
+    std::printf("Sent initial GetStatus to MCU to register as client.\n");
 
     std::printf("\nBody ECU MPU ready. Press Ctrl+C to shut down.\n\n");
 

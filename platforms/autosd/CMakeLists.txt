@@ -7,6 +7,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(LIBS_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../libs)
 
+# OpenSOME/IP stack (real UDP transport)
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/opensomeip.cmake)
+
 # Port interfaces (header-only)
 add_subdirectory(${LIBS_ROOT}/platform/ports ${CMAKE_CURRENT_BINARY_DIR}/ports)
 
@@ -20,7 +23,8 @@ add_library(someip_system STATIC
 target_include_directories(someip_system PUBLIC
     ${LIBS_ROOT}/adapters/openbsw/include
 )
-target_link_libraries(someip_system PUBLIC ports)
+target_link_libraries(someip_system PUBLIC ports someip-transport)
+target_compile_definitions(someip_system PUBLIC HAS_OPENSOMEIP)
 
 # AutoSD adapters (Kuksa, NATS, SomeIpKuksaBridge)
 add_subdirectory(${LIBS_ROOT}/adapters/autosd ${CMAKE_CURRENT_BINARY_DIR}/adapters-autosd)

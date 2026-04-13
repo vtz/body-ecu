@@ -7,6 +7,9 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 set(LIBS_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../libs)
 
+# OpenSOME/IP stack (real UDP transport)
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/opensomeip.cmake)
+
 # Port interfaces (header-only)
 add_subdirectory(${LIBS_ROOT}/platform/ports ${CMAKE_CURRENT_BINARY_DIR}/ports)
 
@@ -35,7 +38,9 @@ target_include_directories(adapters_openbsw PUBLIC
 )
 target_link_libraries(adapters_openbsw PUBLIC
     ports lighting door_lock vehicle_mode can_gateway diagnostics
+    someip-transport
 )
+target_compile_definitions(adapters_openbsw PUBLIC HAS_OPENSOMEIP)
 
 # Linux platform adapters
 add_subdirectory(${LIBS_ROOT}/adapters/linux ${CMAKE_CURRENT_BINARY_DIR}/adapters-linux)

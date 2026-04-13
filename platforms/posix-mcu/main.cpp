@@ -29,6 +29,7 @@ static void signalHandler(int /*sig*/) {
 
 int main(int argc, char* argv[])
 {
+    std::setbuf(stdout, nullptr);
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
 

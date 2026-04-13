@@ -28,7 +28,8 @@ int main(int argc, char* argv[])
     const char* mcu_host = (argc > 1) ? argv[1] : "192.168.100.10";
     std::printf("SOME/IP client -> MCU at %s:30490\n\n", mcu_host);
 
-    adapters::SomeIpConfig someip_cfg{.host = mcu_host, .port = 30490};
+    adapters::SomeIpConfig someip_cfg{
+        .host = mcu_host, .port = 30490, .role = adapters::SomeIpRole::Client};
     adapters::SomeIpSystem someip_client(someip_cfg);
 
     adapters::KuksaConfig kuksa_cfg;
