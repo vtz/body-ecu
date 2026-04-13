@@ -32,29 +32,25 @@ int main(int argc, char* argv[])
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
 
-    std::printf("=== Body ECU (POSIX) ===\n");
-    std::printf("Platform: Linux/POSIX\n\n");
+    std::printf("=== Body ECU (POSIX MCU) ===\n");
+    std::printf("SOME/IP server on 0.0.0.0:30490\n\n");
 
     const char* can_iface = (argc > 1) ? argv[1] : "vcan0";
 
-    // --- SOME/IP transport ---
     adapters::SomeIpConfig someip_cfg{.host = "0.0.0.0", .port = 30490};
     adapters::SomeIpSystem someip_system(someip_cfg);
 
-    // --- Linux platform adapters ---
     adapters::ConsoleGpioAdapter gpio_adapter(
         {"HEADLIGHT (green)", "TURN_SIGNAL (yellow)", "BRAKE (red)"});
 
     adapters::SocketCanAdapter can_adapter(can_iface);
     if (!can_adapter.open()) {
-        std::printf("[WARN] CAN interface '%s' not available, "
-                    "CAN gateway will be non-functional\n", can_iface);
+        std::printf("[WARN] CAN interface '%s' not available\n", can_iface);
     }
 
     adapters::StdinButtonAdapter button_adapter;
     adapters::InProcessSignalBus signal_bus;
 
-    // --- Lifecycle systems ---
     adapters::LightingSystem lighting(gpio_adapter, someip_system);
     adapters::DoorLockSystem door_lock(gpio_adapter, button_adapter,
                                        someip_system,
@@ -82,7 +78,6 @@ int main(int argc, char* argv[])
     door_gw.can_dlc = 2;
     can_gateway.addMapping(door_gw);
 
-    // --- Diagnostics (dual transport: DoIP + DoCAN) ---
     adapters::DiagnosticsSystem diagnostics;
     adapters::DoIpTransport doip_transport;
     adapters::DoCanTransport docan_transport(can_adapter);
@@ -91,11 +86,9 @@ int main(int argc, char* argv[])
     diagnostics.addProvider(&lighting.controller());
     diagnostics.addProvider(&door_lock.controller());
 
-    // --- Cross-service observers ---
     vehicle_mode.manager().addObserver(&lighting.controller());
     vehicle_mode.manager().addObserver(&door_lock.controller());
 
-    // --- Init ---
     std::printf("Initializing systems...\n");
     someip_system.init();
     lighting.init();
@@ -106,7 +99,6 @@ int main(int argc, char* argv[])
     doip_transport.init();
     docan_transport.init();
 
-    // --- Run ---
     std::printf("Starting systems...\n");
     someip_system.run();
     lighting.run();
@@ -116,14 +108,13 @@ int main(int argc, char* argv[])
     diagnostics.run();
     button_adapter.start();
 
-    std::printf("\nBody ECU ready. Press Ctrl+C to shut down.\n");
+    std::printf("\nBody ECU MCU ready. Press Ctrl+C to shut down.\n");
     std::printf("Press Enter to toggle door lock.\n\n");
 
     while (g_running) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    // --- Shutdown ---
     std::printf("\nShutting down...\n");
     button_adapter.stop();
     can_gateway.shutdown();
@@ -136,6 +127,6 @@ int main(int argc, char* argv[])
     someip_system.shutdown();
     can_adapter.close();
 
-    std::printf("Body ECU stopped.\n");
+    std::printf("Body ECU MCU stopped.\n");
     return 0;
 }

@@ -357,13 +357,152 @@ mappings:
 
 ## Build Targets
 
-| Target         | Build Command                                           | Signal Bus        | Cloud Transport |
-|----------------|---------------------------------------------------------|-------------------|-----------------|
-| MCU (Zephyr)   | `west build -b nucleo_h755zi_q/stm32h755xx/m7 app`     | LocalSignalBus    | none (via MPU)  |
-| MPU (AutoSD)   | `cmake -B build/autosd -S platforms/autosd`             | KuksaSignalBus    | NATS            |
-| POSIX (dev)    | `cmake -B build/posix -S platforms/posix`               | InProcessSignalBus| StubCloudTransport |
-| native_sim     | `west build -b native_sim app`                          | LocalSignalBus    | none            |
-| Unit tests     | `cmake -B build/tests -S tests/unit -DBUILD_TESTS=ON`  | Mocks             | Mocks           |
+| Target            | Build Command                                           | Signal Bus         | Cloud Transport    | SOME/IP Role |
+|-------------------|---------------------------------------------------------|--------------------|--------------------|--------------|
+| MCU (Zephyr)      | `west build -b nucleo_h755zi_q/stm32h755xx/m7 app`     | LocalSignalBus     | none (via MPU)     | server       |
+| MPU (AutoSD)      | `cmake -B build/autosd -S platforms/autosd`             | KuksaSignalBus     | NATS               | client       |
+| POSIX MCU (dev)   | `cmake -B build/posix-mcu -S platforms/posix-mcu`      | InProcessSignalBus | none               | server       |
+| POSIX MPU (dev)   | `cmake -B build/posix-mpu -S platforms/posix-mpu`      | InProcessSignalBus | StubCloudTransport | client       |
+| native_sim        | `west build -b native_sim app`                          | LocalSignalBus     | none               | server       |
+| Unit tests        | `cmake -B build/tests -S tests/unit -DBUILD_TESTS=ON`  | Mocks              | Mocks              | --           |
+
+## Development Environment
+
+### Two-Process POSIX Setup
+
+For day-to-day development without hardware or VMs, the body ECU runs as two
+separate POSIX processes on the host that communicate over SOME/IP via
+localhost:
+
+```
+ ┌─────────────────────────┐         SOME/IP (UDP)        ┌─────────────────────────┐
+ │  body_ecu_posix_mcu     │◄────── localhost:30490 ──────►│  body_ecu_posix_mpu     │
+ │                         │                              │                         │
+ │  LOCKING_SERVICE        │                              │  SOMEIP_KUKSA_BRIDGE    │
+ │  LIGHTING               │                              │  CLOUD_GATEWAY_CLIENT   │
+ │  VEHICLE_MODE           │                              │  InProcessSignalBus     │
+ │  CAN_GATEWAY            │                              │  StubCloudTransport     │
+ │  DIAGNOSTICS            │                              │                         │
+ │  SomeIpSystem (server)  │                              │  SomeIpSystem (client)  │
+ │  InProcessSignalBus     │                              │                         │
+ │  ConsoleGpioAdapter     │                              │                         │
+ │  StdinButtonAdapter     │                              │                         │
+ └─────────────────────────┘                              └─────────────────────────┘
+```
+
+**POSIX MCU process** (`platforms/posix-mcu/`): Runs all body services with
+SOME/IP server on port 30490. Reuses the existing Linux adapters
+(ConsoleGpio, SocketCAN, StdinButton). This is an evolution of the current
+`platforms/posix/` build.
+
+**POSIX MPU process** (`platforms/posix-mpu/`): Runs `SomeIpKuksaBridge` as a
+SOME/IP client connecting to the MCU process, plus `CloudGatewayClient` with
+`InProcessSignalBus` and `StubCloudTransport`. No GPIO, CAN, or button
+adapters.
+
+Usage:
+
+```bash
+# Terminal 1 -- MCU side
+cmake -B build/posix-mcu -S platforms/posix-mcu
+cmake --build build/posix-mcu
+./build/posix-mcu/body_ecu_posix_mcu
+
+# Terminal 2 -- MPU side
+cmake -B build/posix-mpu -S platforms/posix-mpu
+cmake --build build/posix-mpu
+./build/posix-mpu/body_ecu_posix_mpu
+```
+
+The existing single-process `platforms/posix/` build is retained for
+quick local testing where the MPU bridge is not needed.
+
+### QEMU + Renode Virtual Integration
+
+For integration testing closer to the target hardware, the MCU firmware
+runs in Renode and the MPU software runs in a QEMU VM with AutoSD. Both
+connect to a shared virtual Ethernet so that SOME/IP traffic flows between
+them as it would on real hardware.
+
+```
+ Host machine
+ ┌──────────────────────────────────────────────────────────────────────┐
+ │                                                                      │
+ │  ┌──────────────────┐       TAP bridge        ┌───────────────────┐ │
+ │  │  Renode           │       (br-ecu)          │  QEMU             │ │
+ │  │  STM32H753        │                         │  AutoSD (aarch64) │ │
+ │  │                   │    ┌──────────────┐     │                   │ │
+ │  │  body_ecu.elf     │    │              │     │  Kuksa Databroker │ │
+ │  │  Ethernet MAC ────┼────┤  br-ecu      ├────┼── eth0            │ │
+ │  │  192.168.100.10   │    │  192.168.100.1│    │  192.168.100.20   │ │
+ │  │                   │    └──────────────┘     │                   │ │
+ │  │  SOME/IP server   │                         │  SOMEIP_KUKSA     │ │
+ │  │  :30490           │◄──── SOME/IP (UDP) ────►│   _BRIDGE         │ │
+ │  │                   │                         │  CLOUD_GATEWAY    │ │
+ │  └──────────────────┘                         │   _CLIENT         │ │
+ │                                                └───────────────────┘ │
+ │                                                                      │
+ │  Host can also attach to br-ecu for debugging (candump, wireshark)   │
+ └──────────────────────────────────────────────────────────────────────┘
+```
+
+#### Network Setup
+
+A helper script (`scripts/vnet_setup.sh`) creates the shared virtual
+network:
+
+1. Creates a Linux bridge `br-ecu` with IP `192.168.100.1/24`.
+2. Creates TAP interfaces `tap-renode` and `tap-qemu`.
+3. Attaches both TAPs to `br-ecu`.
+
+#### Renode Configuration
+
+The Renode script (`renode/body_ecu_vnet.resc`) extends `body_ecu.resc` to
+connect the emulated Ethernet MAC to `tap-renode`:
+
+```
+emulation CreateTap "tap-renode" "tap-renode"
+connector Connect sysbus.ethernet tap-renode
+```
+
+The firmware uses a static IP `192.168.100.10` configured via Zephyr
+prj.conf overlay or board-specific config.
+
+#### QEMU Launch
+
+A helper script (`scripts/run_qemu_autosd.sh`) launches the AutoSD VM:
+
+```bash
+qemu-system-aarch64 \
+    -machine virt -cpu cortex-a57 -m 2G \
+    -drive file=autosd.qcow2,format=qcow2 \
+    -netdev tap,id=net0,ifname=tap-qemu,script=no,downscript=no \
+    -device virtio-net-pci,netdev=net0 \
+    ...
+```
+
+The AutoSD VM is configured with static IP `192.168.100.20` on its
+`eth0` interface. The `SomeIpKuksaBridge` connects to the MCU's SOME/IP
+server at `192.168.100.10:30490`.
+
+#### Integration Test Flow
+
+1. `scripts/vnet_setup.sh` creates the bridge and TAPs.
+2. Renode launches with `body_ecu_vnet.resc` (MCU firmware).
+3. QEMU launches with AutoSD image (MPU services).
+4. Test harness (Python/pytest) runs on the host, connected to `br-ecu`:
+   - Sends NATS messages to simulate cloud commands (via NATS container
+     on the host, also attached to `br-ecu` or on `localhost`).
+   - Verifies SOME/IP events via a Python SOME/IP client.
+   - Verifies Kuksa signals via Kuksa gRPC client.
+   - Checks round-trip: cloud command -> NATS -> MPU -> SOME/IP -> MCU
+     lock -> SOME/IP event -> MPU -> Kuksa signal -> NATS response.
+
+#### CI Considerations
+
+The QEMU + Renode integration test is heavyweight and runs as a separate
+CI job gated on the `integration` label or nightly schedule. The two-process
+POSIX setup is used for faster CI feedback.
 
 ## Dependencies
 
@@ -410,22 +549,40 @@ Create `config/vss_overlay.yaml` and `config/signal_bridge.yaml`. Add
 
 ### Phase 5: Adapters
 
-Implement adapter sets for all three platforms:
-- AutoSD/MPU: `KuksaSignalBusAdapter`, `NatsCloudTransportAdapter`
-- Zephyr/MCU: `LocalSignalBus`, `CanSignalBridge`
+Implement adapter sets for all platforms:
+- AutoSD/MPU: `KuksaSignalBusAdapter`, `NatsCloudTransportAdapter`,
+  `SomeIpKuksaBridge`
+- Zephyr/MCU: `LocalSignalBus` (internal only; cross-processor uses existing
+  SOME/IP)
 - POSIX/dev: `InProcessSignalBus`, `StubCloudTransport`
 
-### Phase 6: Deployment Configuration and Build System
+### Phase 6: Two-Process POSIX Development Builds
+
+Split the existing `platforms/posix/` into two builds:
+- `platforms/posix-mcu/`: body services with SOME/IP server (evolution of
+  existing `platforms/posix/`).
+- `platforms/posix-mpu/`: `SomeIpKuksaBridge` + `CloudGatewayClient` as
+  SOME/IP client.
+Retain existing `platforms/posix/` as a single-process convenience build.
+
+### Phase 7: Deployment Configuration and Build System
 
 Create `config/deployment.yaml`. Add `platforms/autosd/` build target. Update
 `west.yml` with new dependencies. Wire new adapters into application entry
 points.
 
-### Phase 7: Testing
+### Phase 8: QEMU + Renode Virtual Integration
 
-Unit tests for all new components (GoogleTest). Integration tests for
-NATS round-trip and Kuksa signal propagation (Python/pytest). CI pipeline
-updates for AutoSD build and containerized integration tests.
+Create virtual networking scripts (`scripts/vnet_setup.sh`), extended
+Renode script (`renode/body_ecu_vnet.resc`), and QEMU launch script
+(`scripts/run_qemu_autosd.sh`). Validate SOME/IP communication between
+Renode (MCU) and QEMU/AutoSD (MPU) over TAP bridge.
+
+### Phase 9: Testing
+
+Unit tests for all new components (GoogleTest). Two-process POSIX
+integration tests. QEMU + Renode end-to-end test (nightly/gated). CI
+pipeline updates for all build targets.
 
 ## Out of Scope
 

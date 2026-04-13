@@ -2,6 +2,8 @@ add_library(adapters_linux STATIC
     src/ConsoleGpioAdapter.cpp
     src/SocketCanAdapter.cpp
     src/StdinButtonAdapter.cpp
+    src/InProcessSignalBus.cpp
+    src/StubCloudTransport.cpp
 )
 target_include_directories(adapters_linux PUBLIC include)
 target_link_libraries(adapters_linux PUBLIC ports)

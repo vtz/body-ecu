@@ -27,6 +27,8 @@ LOG_MODULE_REGISTER(body_ecu, LOG_LEVEL_INF);
 #include "zephyr_adapters/GpioAdapter.h"
 #endif
 
+#include "zephyr_adapters/LocalSignalBus.h"
+
 using namespace body_ecu;
 
 int main(void)
@@ -72,13 +74,17 @@ int main(void)
     can_adapter.configure();
 #endif
 
+    // --- Signal bus ---
+    adapters::LocalSignalBus signal_bus;
+
     // --- Lifecycle systems ---
 #ifdef CONFIG_GPIO
     std::optional<adapters::LightingSystem> lighting;
     std::optional<adapters::DoorLockSystem> door_lock;
     if (gpio_ok) {
         lighting.emplace(gpio_adapter, someip_system);
-        door_lock.emplace(gpio_adapter, button_adapter, someip_system);
+        door_lock.emplace(gpio_adapter, button_adapter, someip_system,
+                          body::DoorLockConfig{}, &signal_bus);
     }
 #endif
     adapters::VehicleModeSystem vehicle_mode(someip_system);
