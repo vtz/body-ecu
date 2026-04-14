@@ -1,0 +1,14 @@
+[Unit]
+Description=Body ECU HPC (MPU-side SOME/IP bridge and cloud gateway)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+EnvironmentFile=-/etc/body-ecu/body-ecu-hpc.env
+ExecStart=/usr/bin/body-ecu-hpc $MCU_HOST
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=multi-user.target

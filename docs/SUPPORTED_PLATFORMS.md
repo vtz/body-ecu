@@ -59,6 +59,58 @@ scripts/run_qemu_autosd.sh autosd.qcow2
 sudo scripts/vnet_teardown.sh
 ```
 
+## RPM Package (HPC / MPU)
+
+The `body-ecu-hpc` RPM packages the POSIX MPU build for deployment on
+Fedora / AutoSD / RHIVOS. It installs the binary, systemd unit, and
+config files.
+
+### Build the source tarball and RPM
+
+```bash
+# Create the source tarball rpmbuild expects
+VERSION=0.1.0
+git archive --format=tar.gz --prefix=body-ecu-hpc-${VERSION}/ \
+    -o ~/rpmbuild/SOURCES/body-ecu-hpc-${VERSION}.tar.gz HEAD
+
+# Build the RPM (in a Fedora container or VM)
+rpmbuild -ba packaging/body-ecu-hpc.spec
+```
+
+### Quick build in a Fedora container
+
+```bash
+podman run --rm -v $(pwd):/src:Z fedora:latest bash -c '
+    dnf install -y rpm-build cmake gcc-c++ git-core systemd-rpm-macros
+    VERSION=0.1.0
+    mkdir -p ~/rpmbuild/SOURCES
+    cd /src
+    tar czf ~/rpmbuild/SOURCES/body-ecu-hpc-${VERSION}.tar.gz \
+        --transform "s,^,body-ecu-hpc-${VERSION}/," \
+        --exclude=build --exclude=.git .
+    rpmbuild -ba packaging/body-ecu-hpc.spec
+    cp ~/rpmbuild/RPMS/*/*.rpm /src/build/
+'
+```
+
+### Install and run on the target
+
+```bash
+sudo dnf install ./body-ecu-hpc-0.1.0-1.*.rpm
+sudo systemctl enable --now body-ecu-hpc
+
+# Override MCU host if needed
+sudo systemctl edit body-ecu-hpc  # or edit /etc/body-ecu/body-ecu-hpc.env
+```
+
+### Packaging files
+
+| File | Purpose |
+|------|---------|
+| `packaging/body-ecu-hpc.spec` | RPM spec |
+| `packaging/body-ecu-hpc.service` | systemd unit |
+| `packaging/body-ecu-hpc.env` | Environment file (MCU host config) |
+
 ## Cross-Processor Communication
 
 MPU and MCU communicate via SOME/IP over Ethernet (see ADR-008).
