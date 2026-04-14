@@ -62,6 +62,63 @@ west build -b nucleo_h755zi_q/stm32h755xx/m7 app
 west flash
 ```
 
+## RPM package (HPC / MPU)
+
+The `body-ecu-hpc` RPM packages the MPU-side binary for deployment on
+Fedora / AutoSD / RHIVOS. Requires [Podman](https://podman.io).
+
+### Quick build (native arch)
+
+```bash
+packaging/build-rpm.sh
+```
+
+### Cross-build for aarch64 (from any host)
+
+```bash
+packaging/build-rpm.sh aarch64
+```
+
+Both produce binary and source RPMs in `build/rpm/`.
+
+### What the script does
+
+1. Builds a Fedora 41 container with RPM build tools (`packaging/Containerfile.rpm-build`)
+2. Creates a source tarball from your working tree
+3. Runs `rpmbuild -ba` against `packaging/body-ecu-hpc.spec`
+4. Copies the RPMs to `build/rpm/`
+
+### Manual build (without the script)
+
+```bash
+# Build the container image
+podman build --platform linux/aarch64 \
+    -t body-ecu-rpm-build:aarch64 \
+    -f packaging/Containerfile.rpm-build .
+
+# Run rpmbuild inside it
+podman run --rm --platform linux/aarch64 \
+    -v $(pwd):/src:Z \
+    body-ecu-rpm-build:aarch64 \
+    -c '
+        VERSION=0.1.0
+        tar czf ~/rpmbuild/SOURCES/body-ecu-hpc-${VERSION}.tar.gz \
+            --transform "s,^\.,body-ecu-hpc-${VERSION}," \
+            --exclude=build --exclude=.git .
+        rpmbuild -ba packaging/body-ecu-hpc.spec
+    '
+```
+
+### Install on the target
+
+```bash
+sudo dnf install ./body-ecu-hpc-0.1.0-1.*.rpm
+sudo systemctl enable --now body-ecu-hpc
+```
+
+The MCU host address defaults to `192.168.100.10` and can be changed in
+`/etc/body-ecu/body-ecu-hpc.env`.
+
 ## Host-based unit tests
 
 Unit tests do **not** require Zephyr or a cross-compiler. They build
