@@ -1,12 +1,18 @@
 #pragma once
 
 #include <map>
-#include <mutex>
 #include <set>
 #include <string>
-#include <thread>
 #include <vector>
 
+#ifdef __ZEPHYR__
+#include <zephyr/kernel.h>
+#else
+#include <mutex>
+#include <thread>
+#endif
+
+#include "lifecycle/ILifecycleComponent.h"
 #include "ports/ISomeIpService.h"
 
 #ifdef HAS_OPENSOMEIP
@@ -17,7 +23,29 @@
 
 namespace body_ecu::adapters {
 
-enum class LifecycleState { Created, Initialized, Running, Shutdown };
+#ifdef __ZEPHYR__
+class PlatformMutex {
+public:
+    PlatformMutex() { k_mutex_init(&m_); }
+    void lock() { k_mutex_lock(&m_, K_FOREVER); }
+    void unlock() { k_mutex_unlock(&m_); }
+private:
+    k_mutex m_;
+};
+class PlatformLockGuard {
+public:
+    explicit PlatformLockGuard(PlatformMutex& m) : m_(m) { m_.lock(); }
+    ~PlatformLockGuard() { m_.unlock(); }
+    PlatformLockGuard(const PlatformLockGuard&) = delete;
+    PlatformLockGuard& operator=(const PlatformLockGuard&) = delete;
+private:
+    PlatformMutex& m_;
+};
+#else
+using PlatformMutex = std::mutex;
+template <class M>
+using PlatformLockGuard = std::lock_guard<M>;
+#endif
 
 enum class SomeIpRole { Server, Client };
 
@@ -27,24 +55,21 @@ struct SomeIpConfig {
     SomeIpRole role{SomeIpRole::Server};
 };
 
-/// SomeIpSystem implements ISomeIpService and manages the SOME/IP
-/// transport lifecycle. When linked with opensomeip (HAS_OPENSOMEIP),
-/// uses real UDP transport. Otherwise falls back to in-memory dispatch
-/// for unit testing.
-class SomeIpSystem : public ports::ISomeIpService
+class SomeIpSystem : public lifecycle::ILifecycleComponent
+                   , public ports::ISomeIpService
 #ifdef HAS_OPENSOMEIP
-    , public someip::transport::ITransportListener
+                   , public someip::transport::ITransportListener
 #endif
 {
 public:
     explicit SomeIpSystem(const SomeIpConfig& config = {});
     ~SomeIpSystem();
 
-    void init();
-    void run();
-    void shutdown();
+    void init() override;
+    void run() override;
+    void shutdown() override;
 
-    LifecycleState state() const { return state_; }
+    bool isRunning() const { return running_; }
 
     // ISomeIpService
     void registerMethod(uint16_t service_id, uint16_t method_id,
@@ -55,15 +80,12 @@ public:
                    const std::vector<uint8_t>& payload) override;
     void sendResponse(const ports::SomeIpMessage& response) override;
 
-    /// Simulate an incoming request (for testing dispatch logic).
     ports::SomeIpMessage dispatch(const ports::SomeIpMessage& request);
 
-    /// Access sent events (for test verification).
     const std::vector<ports::SomeIpMessage>& sentEvents() const {
         return sent_events_;
     }
 
-    /// Access sent responses (for test verification).
     const std::vector<ports::SomeIpMessage>& sentResponses() const {
         return sent_responses_;
     }
@@ -90,8 +112,8 @@ private:
     };
 
     SomeIpConfig config_;
-    LifecycleState state_{LifecycleState::Created};
-    std::mutex mutex_;
+    bool running_{false};
+    PlatformMutex mutex_;
     std::map<MethodKey, ports::MethodHandler> methods_;
     std::vector<EventRegistration> events_;
     std::vector<ports::SomeIpMessage> sent_events_;

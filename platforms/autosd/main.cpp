@@ -4,6 +4,7 @@
 #include <thread>
 #include <chrono>
 
+#include "lifecycle/LifecycleManager.h"
 #include "SomeIpSystem.h"
 #include "autosd_adapters/KuksaSignalBusAdapter.h"
 #include "autosd_adapters/NatsCloudTransportAdapter.h"
@@ -60,14 +61,15 @@ int main(int argc, char* argv[])
     platform::CloudGatewayClient gateway(cloud_transport, signal_bus,
                                          gw_config);
 
-    std::printf("Initializing...\n");
     signal_bus.connect();
-    someip_client.init();
+
+    lifecycle::LifecycleManager lm;
+    lm.addComponent("someip_client", someip_client, 1);
+
+    lm.transitionToLevel(1);
+
     bridge.init();
     gateway.init();
-
-    std::printf("Starting...\n");
-    someip_client.run();
 
     std::printf("\nBody ECU AutoSD MPU ready. Press Ctrl+C to shut down.\n\n");
 
@@ -78,7 +80,7 @@ int main(int argc, char* argv[])
     std::printf("\nShutting down...\n");
     gateway.shutdown();
     bridge.shutdown();
-    someip_client.shutdown();
+    lm.shutdownAll();
     signal_bus.disconnect();
 
     std::printf("Body ECU AutoSD MPU stopped.\n");

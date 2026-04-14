@@ -3,23 +3,21 @@
 #include "diagnostics/DtcStore.h"
 #include "diagnostics/ITransportLayer.h"
 #include "diagnostics/UdsServiceHandler.h"
+#include "lifecycle/ILifecycleComponent.h"
 #include "ports/IDiagDataProvider.h"
 
 namespace body_ecu::adapters {
 
-/// AsyncLifecycleComponent wrapper that owns the UDS diagnostics stack.
-/// In the full build, this wires DoIpServerSystem (Ethernet) and
-/// DoCanSystem (CAN-FD) as transport layers for dual-transport UDS.
-class DiagnosticsSystem {
+class DiagnosticsSystem : public lifecycle::ILifecycleComponent {
 public:
     DiagnosticsSystem();
 
     void addTransport(platform::ITransportLayer* transport);
     void addProvider(ports::IDiagDataProvider* provider);
 
-    void init();
-    void run();
-    void shutdown();
+    void init() override;
+    void run() override;
+    void shutdown() override;
 
     platform::UdsServiceHandler& handler() { return handler_; }
     platform::DtcStore& dtcStore() { return dtc_store_; }

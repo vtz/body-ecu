@@ -1,9 +1,11 @@
 #include <csignal>
 #include <cstdio>
+#include <cstdlib>
 #include <atomic>
 #include <thread>
 #include <chrono>
 
+#include "lifecycle/LifecycleManager.h"
 #include "SomeIpSystem.h"
 #include "autosd_adapters/SomeIpKuksaBridge.h"
 #include "cloud_gateway/CloudGatewayClient.h"
@@ -26,7 +28,9 @@ int main(int argc, char* argv[])
 
     std::printf("=== Body ECU (POSIX MPU) ===\n");
 
-    const char* mcu_host = (argc > 1) ? argv[1] : "127.0.0.1";
+    const char* mcu_host = (argc > 1) ? argv[1]
+                           : std::getenv("MCU_HOST") ? std::getenv("MCU_HOST")
+                           : "127.0.0.1";
     uint16_t mcu_port = 30490;
     std::printf("SOME/IP client connecting to %s:%u\n\n", mcu_host,
                 mcu_port);
@@ -62,15 +66,16 @@ int main(int argc, char* argv[])
     platform::CloudGatewayClient gateway(cloud_transport, signal_bus,
                                          gw_config);
 
-    std::printf("Initializing...\n");
-    someip_client.init();
+    // Level 1: SOME/IP transport
+    lifecycle::LifecycleManager lm;
+    lm.addComponent("someip_client", someip_client, 1);
+
+    lm.transitionToLevel(1);
+
+    // Bridge and gateway init after SOME/IP is up
     bridge.init();
     gateway.init();
 
-    std::printf("Starting...\n");
-    someip_client.run();
-
-    // Send a GetStatus request to register with the MCU server
     ports::SomeIpMessage status_req;
     status_req.service_id = 0x1001;
     status_req.method_id = 0x0003;  // GetStatus
@@ -87,7 +92,7 @@ int main(int argc, char* argv[])
     std::printf("\nShutting down...\n");
     gateway.shutdown();
     bridge.shutdown();
-    someip_client.shutdown();
+    lm.shutdownAll();
 
     std::printf("Body ECU MPU stopped.\n");
     return 0;

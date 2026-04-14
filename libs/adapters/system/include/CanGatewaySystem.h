@@ -2,20 +2,20 @@
 
 #include "SomeIpSystem.h"
 #include "can_gateway/CanGateway.h"
+#include "lifecycle/ILifecycleComponent.h"
 #include "ports/ICanBus.h"
 
 namespace body_ecu::adapters {
 
-/// AsyncLifecycleComponent wrapper that owns a CanGateway.
-class CanGatewaySystem {
+class CanGatewaySystem : public lifecycle::ILifecycleComponent {
 public:
     CanGatewaySystem(ports::ICanBus& can, SomeIpSystem& someip);
 
     void addMapping(const platform::ServiceMapping& mapping);
 
-    void init();
-    void run();
-    void shutdown();
+    void init() override;
+    void run() override;
+    void shutdown() override;
 
     platform::CanGateway& gateway() { return gateway_; }
 

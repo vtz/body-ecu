@@ -5,6 +5,7 @@
 #include <chrono>
 
 #include "door_lock/DoorLockController.h"
+#include "lifecycle/LifecycleManager.h"
 #include "CanGatewaySystem.h"
 #include "DiagnosticsSystem.h"
 #include "DoCanTransport.h"
@@ -90,23 +91,20 @@ int main(int argc, char* argv[])
     vehicle_mode.manager().addObserver(&lighting.controller());
     vehicle_mode.manager().addObserver(&door_lock.controller());
 
-    std::printf("Initializing systems...\n");
-    someip_system.init();
-    lighting.init();
-    door_lock.init();
-    vehicle_mode.init();
-    can_gateway.init();
-    diagnostics.init();
-    doip_transport.init();
-    docan_transport.init();
+    // Level 1: transport
+    // Level 2: domain services
+    // Level 3: gateways and diagnostics
+    lifecycle::LifecycleManager lm;
+    lm.addComponent("someip",       someip_system,    1);
+    lm.addComponent("lighting",     lighting,         2);
+    lm.addComponent("door_lock",    door_lock,        2);
+    lm.addComponent("vehicle_mode", vehicle_mode,     2);
+    lm.addComponent("can_gateway",  can_gateway,      3);
+    lm.addComponent("diagnostics",  diagnostics,      3);
+    lm.addComponent("doip",         doip_transport,   3);
+    lm.addComponent("docan",        docan_transport,   3);
 
-    std::printf("Starting systems...\n");
-    someip_system.run();
-    lighting.run();
-    door_lock.run();
-    vehicle_mode.run();
-    can_gateway.run();
-    diagnostics.run();
+    lm.transitionToLevel(3);
     button_adapter.start();
 
     std::printf("\nBody ECU MCU ready. Press Ctrl+C to shut down.\n");
@@ -118,14 +116,7 @@ int main(int argc, char* argv[])
 
     std::printf("\nShutting down...\n");
     button_adapter.stop();
-    can_gateway.shutdown();
-    diagnostics.shutdown();
-    doip_transport.shutdown();
-    docan_transport.shutdown();
-    lighting.shutdown();
-    door_lock.shutdown();
-    vehicle_mode.shutdown();
-    someip_system.shutdown();
+    lm.shutdownAll();
     can_adapter.close();
 
     std::printf("Body ECU MCU stopped.\n");

@@ -13,6 +13,9 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/opensomeip.cmake)
 # Port interfaces (header-only)
 add_subdirectory(${LIBS_ROOT}/platform/ports ${CMAKE_CURRENT_BINARY_DIR}/ports)
 
+# Lifecycle manager
+add_subdirectory(${LIBS_ROOT}/platform/lifecycle ${CMAKE_CURRENT_BINARY_DIR}/lifecycle)
+
 # Domain modules
 add_subdirectory(${LIBS_ROOT}/body/lighting ${CMAKE_CURRENT_BINARY_DIR}/lighting)
 add_subdirectory(${LIBS_ROOT}/body/door-lock ${CMAKE_CURRENT_BINARY_DIR}/door-lock)
@@ -22,25 +25,25 @@ add_subdirectory(${LIBS_ROOT}/body/vehicle-mode ${CMAKE_CURRENT_BINARY_DIR}/vehi
 add_subdirectory(${LIBS_ROOT}/platform/can-gateway ${CMAKE_CURRENT_BINARY_DIR}/can-gateway)
 add_subdirectory(${LIBS_ROOT}/platform/diagnostics ${CMAKE_CURRENT_BINARY_DIR}/diagnostics)
 
-# OpenBSW adapter layer (SomeIpSystem, lifecycle wrappers, DoIP/DoCAN)
-add_library(adapters_openbsw STATIC
-    ${LIBS_ROOT}/adapters/openbsw/src/SomeIpSystem.cpp
-    ${LIBS_ROOT}/adapters/openbsw/src/LightingSystem.cpp
-    ${LIBS_ROOT}/adapters/openbsw/src/DoorLockSystem.cpp
-    ${LIBS_ROOT}/adapters/openbsw/src/VehicleModeSystem.cpp
-    ${LIBS_ROOT}/adapters/openbsw/src/CanGatewaySystem.cpp
-    ${LIBS_ROOT}/adapters/openbsw/src/DiagnosticsSystem.cpp
-    ${LIBS_ROOT}/adapters/openbsw/src/DoIpTransport.cpp
-    ${LIBS_ROOT}/adapters/openbsw/src/DoCanTransport.cpp
+# System adapter layer (lifecycle wrappers, SOME/IP, DoIP/DoCAN)
+add_library(adapters_system STATIC
+    ${LIBS_ROOT}/adapters/system/src/SomeIpSystem.cpp
+    ${LIBS_ROOT}/adapters/system/src/LightingSystem.cpp
+    ${LIBS_ROOT}/adapters/system/src/DoorLockSystem.cpp
+    ${LIBS_ROOT}/adapters/system/src/VehicleModeSystem.cpp
+    ${LIBS_ROOT}/adapters/system/src/CanGatewaySystem.cpp
+    ${LIBS_ROOT}/adapters/system/src/DiagnosticsSystem.cpp
+    ${LIBS_ROOT}/adapters/system/src/DoIpTransport.cpp
+    ${LIBS_ROOT}/adapters/system/src/DoCanTransport.cpp
 )
-target_include_directories(adapters_openbsw PUBLIC
-    ${LIBS_ROOT}/adapters/openbsw/include
+target_include_directories(adapters_system PUBLIC
+    ${LIBS_ROOT}/adapters/system/include
 )
-target_link_libraries(adapters_openbsw PUBLIC
-    ports lighting door_lock vehicle_mode can_gateway diagnostics
+target_link_libraries(adapters_system PUBLIC
+    ports lifecycle lighting door_lock vehicle_mode can_gateway diagnostics
     someip-transport
 )
-target_compile_definitions(adapters_openbsw PUBLIC HAS_OPENSOMEIP)
+target_compile_definitions(adapters_system PUBLIC HAS_OPENSOMEIP)
 
 # Linux platform adapters
 add_subdirectory(${LIBS_ROOT}/adapters/linux ${CMAKE_CURRENT_BINARY_DIR}/adapters-linux)
@@ -48,6 +51,7 @@ add_subdirectory(${LIBS_ROOT}/adapters/linux ${CMAKE_CURRENT_BINARY_DIR}/adapter
 # POSIX MCU executable (body services + SOME/IP server)
 add_executable(body_ecu_posix_mcu main.cpp)
 target_link_libraries(body_ecu_posix_mcu PRIVATE
-    adapters_openbsw
+    adapters_system
     adapters_linux
+    lifecycle
 )

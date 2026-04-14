@@ -11,13 +11,13 @@ protected:
 };
 
 TEST_F(SomeIpSystemTest, LifecycleTransitions) {
-    EXPECT_EQ(sys_.state(), LifecycleState::Created);
+    EXPECT_FALSE(sys_.isRunning());
     sys_.init();
-    EXPECT_EQ(sys_.state(), LifecycleState::Initialized);
+    EXPECT_FALSE(sys_.isRunning());
     sys_.run();
-    EXPECT_EQ(sys_.state(), LifecycleState::Running);
+    EXPECT_TRUE(sys_.isRunning());
     sys_.shutdown();
-    EXPECT_EQ(sys_.state(), LifecycleState::Shutdown);
+    EXPECT_FALSE(sys_.isRunning());
 }
 
 TEST_F(SomeIpSystemTest, MethodRegistrationAndDispatch) {

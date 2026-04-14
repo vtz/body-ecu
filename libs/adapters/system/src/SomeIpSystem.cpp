@@ -7,13 +7,12 @@ namespace body_ecu::adapters {
 SomeIpSystem::SomeIpSystem(const SomeIpConfig& config) : config_(config) {}
 
 SomeIpSystem::~SomeIpSystem() {
-    if (state_ == LifecycleState::Running) {
+    if (running_) {
         shutdown();
     }
 }
 
 void SomeIpSystem::init() {
-    state_ = LifecycleState::Initialized;
 #ifdef HAS_OPENSOMEIP
     is_server_ = (config_.role == SomeIpRole::Server);
     if (is_server_) {
@@ -32,7 +31,7 @@ void SomeIpSystem::init() {
 }
 
 void SomeIpSystem::run() {
-    state_ = LifecycleState::Running;
+    running_ = true;
 #ifdef HAS_OPENSOMEIP
     auto result = transport_->start();
     if (result != someip::Result::SUCCESS) {
@@ -46,27 +45,27 @@ void SomeIpSystem::run() {
 }
 
 void SomeIpSystem::shutdown() {
-    state_ = LifecycleState::Shutdown;
+    running_ = false;
 #ifdef HAS_OPENSOMEIP
     if (transport_) {
         transport_->stop();
         std::printf("[SOME/IP] Transport stopped\n");
     }
 #endif
-    std::lock_guard lock(mutex_);
+    PlatformLockGuard lock(mutex_);
     methods_.clear();
     events_.clear();
 }
 
 void SomeIpSystem::registerMethod(uint16_t service_id, uint16_t method_id,
                                   ports::MethodHandler handler) {
-    std::lock_guard lock(mutex_);
+    PlatformLockGuard lock(mutex_);
     methods_[makeKey(service_id, method_id)] = std::move(handler);
 }
 
 void SomeIpSystem::registerEvent(uint16_t service_id, uint16_t event_id,
                                  uint16_t eventgroup_id) {
-    std::lock_guard lock(mutex_);
+    PlatformLockGuard lock(mutex_);
     events_.push_back({service_id, event_id, eventgroup_id});
 }
 
@@ -81,9 +80,9 @@ void SomeIpSystem::sendEvent(uint16_t service_id, uint16_t event_id,
     sent_events_.push_back(msg);
 
 #ifdef HAS_OPENSOMEIP
-    if (transport_ && state_ == LifecycleState::Running) {
+    if (transport_ && running_) {
         auto someip_msg = toSomeIp(msg);
-        std::lock_guard lock(mutex_);
+        PlatformLockGuard lock(mutex_);
         for (const auto& client : known_clients_) {
             (void)transport_->send_message(someip_msg, client);
         }
@@ -95,10 +94,10 @@ void SomeIpSystem::sendResponse(const ports::SomeIpMessage& response) {
     sent_responses_.push_back(response);
 
 #ifdef HAS_OPENSOMEIP
-    if (transport_ && state_ == LifecycleState::Running) {
+    if (transport_ && running_) {
         auto someip_msg = toSomeIp(response);
         if (is_server_) {
-            std::lock_guard lock(mutex_);
+            PlatformLockGuard lock(mutex_);
             for (const auto& client : known_clients_) {
                 (void)transport_->send_message(someip_msg, client);
             }
@@ -113,7 +112,7 @@ ports::SomeIpMessage SomeIpSystem::dispatch(
     const ports::SomeIpMessage& request) {
     ports::MethodHandler handler;
     {
-        std::lock_guard lock(mutex_);
+        PlatformLockGuard lock(mutex_);
         auto it = methods_.find(makeKey(request.service_id, request.method_id));
         if (it == methods_.end()) {
             ports::SomeIpMessage err = request;
@@ -136,25 +135,28 @@ void SomeIpSystem::on_message_received(
     if (!message) return;
 
     {
-        std::lock_guard lock(mutex_);
+        PlatformLockGuard lock(mutex_);
         known_clients_.insert(sender);
     }
 
     auto incoming = fromSomeIp(*message);
 
-    std::printf("[SOME/IP] Received service=0x%04X method=0x%04X type=0x%02X from %s\n",
+    std::printf("[SOME/IP] Received service=0x%04X method=0x%04X type=0x%02X from %s payload=[",
                 incoming.service_id, incoming.method_id,
                 incoming.message_type, sender.to_string().c_str());
+    for (size_t i = 0; i < incoming.payload.size(); ++i) {
+        std::printf("%s0x%02X", i ? " " : "", incoming.payload[i]);
+    }
+    std::printf("]\n");
 
     if (message->is_request()) {
         auto response = dispatch(incoming);
         auto resp_msg = toSomeIp(response);
         (void)transport_->send_message(resp_msg, sender);
     } else {
-        // Response, notification, or error -- dispatch to registered handler
         ports::MethodHandler handler;
         {
-            std::lock_guard lock(mutex_);
+            PlatformLockGuard lock(mutex_);
             auto key = makeKey(incoming.service_id, incoming.method_id);
             auto it = methods_.find(key);
             if (it != methods_.end()) {
@@ -177,7 +179,7 @@ void SomeIpSystem::on_connection_lost(
     const someip::transport::Endpoint& endpoint) {
     std::printf("[SOME/IP] Connection lost: %s\n",
                 endpoint.to_string().c_str());
-    std::lock_guard lock(mutex_);
+    PlatformLockGuard lock(mutex_);
     known_clients_.erase(endpoint);
 }
 

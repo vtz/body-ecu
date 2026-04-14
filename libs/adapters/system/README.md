@@ -1,10 +1,11 @@
-# openbsw -- OpenBSW Lifecycle Adapters
+# system -- Lifecycle System Adapters
 
-AsyncLifecycleComponent wrappers and transport adapters that integrate domain services with the OpenBSW LifecycleManager.
+System wrappers that implement `lifecycle::ILifecycleComponent` and bridge
+domain controllers with the `LifecycleManager`.
 
 ## System Wrappers
 
-Each system wrapper owns a domain controller and manages its init/run/shutdown lifecycle:
+Each system owns a domain controller and manages its init/run/shutdown lifecycle:
 
 | System | Domain Controller | Description |
 |--------|------------------|-------------|

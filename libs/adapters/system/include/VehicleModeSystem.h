@@ -1,19 +1,19 @@
 #pragma once
 
 #include "SomeIpSystem.h"
+#include "lifecycle/ILifecycleComponent.h"
 #include "vehicle_mode/VehicleModeManager.h"
 
 namespace body_ecu::adapters {
 
-/// AsyncLifecycleComponent wrapper that owns a VehicleModeManager.
-class VehicleModeSystem {
+class VehicleModeSystem : public lifecycle::ILifecycleComponent {
 public:
     VehicleModeSystem(SomeIpSystem& someip,
                       const body::VehicleModeConfig& config = {});
 
-    void init();
-    void run();
-    void shutdown();
+    void init() override;
+    void run() override;
+    void shutdown() override;
 
     body::VehicleModeManager& manager() { return manager_; }
     const body::VehicleModeManager& manager() const { return manager_; }

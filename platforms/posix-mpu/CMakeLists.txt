@@ -13,17 +13,20 @@ include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/opensomeip.cmake)
 # Port interfaces (header-only)
 add_subdirectory(${LIBS_ROOT}/platform/ports ${CMAKE_CURRENT_BINARY_DIR}/ports)
 
+# Lifecycle manager
+add_subdirectory(${LIBS_ROOT}/platform/lifecycle ${CMAKE_CURRENT_BINARY_DIR}/lifecycle)
+
 # Platform modules
 add_subdirectory(${LIBS_ROOT}/platform/cloud-gateway ${CMAKE_CURRENT_BINARY_DIR}/cloud-gateway)
 
-# OpenBSW SomeIpSystem (SOME/IP client for bridge)
+# SomeIpSystem (SOME/IP client for bridge)
 add_library(someip_system STATIC
-    ${LIBS_ROOT}/adapters/openbsw/src/SomeIpSystem.cpp
+    ${LIBS_ROOT}/adapters/system/src/SomeIpSystem.cpp
 )
 target_include_directories(someip_system PUBLIC
-    ${LIBS_ROOT}/adapters/openbsw/include
+    ${LIBS_ROOT}/adapters/system/include
 )
-target_link_libraries(someip_system PUBLIC ports someip-transport)
+target_link_libraries(someip_system PUBLIC ports lifecycle someip-transport)
 target_compile_definitions(someip_system PUBLIC HAS_OPENSOMEIP)
 
 # AutoSD adapters (SomeIpKuksaBridge)
@@ -39,4 +42,5 @@ target_link_libraries(body_ecu_posix_mpu PRIVATE
     adapters_autosd
     adapters_linux
     someip_system
+    lifecycle
 )

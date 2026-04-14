@@ -5,6 +5,7 @@
 #include <chrono>
 
 #include "door_lock/DoorLockController.h"
+#include "lifecycle/LifecycleManager.h"
 #include "CanGatewaySystem.h"
 #include "DiagnosticsSystem.h"
 #include "DoCanTransport.h"
@@ -37,11 +38,9 @@ int main(int argc, char* argv[])
 
     const char* can_iface = (argc > 1) ? argv[1] : "vcan0";
 
-    // --- SOME/IP transport ---
     adapters::SomeIpConfig someip_cfg{.host = "0.0.0.0", .port = 30490};
     adapters::SomeIpSystem someip_system(someip_cfg);
 
-    // --- Linux platform adapters ---
     adapters::ConsoleGpioAdapter gpio_adapter(
         {"HEADLIGHT (green)", "TURN_SIGNAL (yellow)", "BRAKE (red)"});
 
@@ -54,7 +53,6 @@ int main(int argc, char* argv[])
     adapters::StdinButtonAdapter button_adapter;
     adapters::InProcessSignalBus signal_bus;
 
-    // --- Lifecycle systems ---
     adapters::LightingSystem lighting(gpio_adapter, someip_system);
     adapters::DoorLockSystem door_lock(gpio_adapter, button_adapter,
                                        someip_system,
@@ -82,7 +80,6 @@ int main(int argc, char* argv[])
     door_gw.can_dlc = 2;
     can_gateway.addMapping(door_gw);
 
-    // --- Diagnostics (dual transport: DoIP + DoCAN) ---
     adapters::DiagnosticsSystem diagnostics;
     adapters::DoIpTransport doip_transport;
     adapters::DoCanTransport docan_transport(can_adapter);
@@ -91,29 +88,20 @@ int main(int argc, char* argv[])
     diagnostics.addProvider(&lighting.controller());
     diagnostics.addProvider(&door_lock.controller());
 
-    // --- Cross-service observers ---
     vehicle_mode.manager().addObserver(&lighting.controller());
     vehicle_mode.manager().addObserver(&door_lock.controller());
 
-    // --- Init ---
-    std::printf("Initializing systems...\n");
-    someip_system.init();
-    lighting.init();
-    door_lock.init();
-    vehicle_mode.init();
-    can_gateway.init();
-    diagnostics.init();
-    doip_transport.init();
-    docan_transport.init();
+    lifecycle::LifecycleManager lm;
+    lm.addComponent("someip",       someip_system,    1);
+    lm.addComponent("lighting",     lighting,         2);
+    lm.addComponent("door_lock",    door_lock,        2);
+    lm.addComponent("vehicle_mode", vehicle_mode,     2);
+    lm.addComponent("can_gateway",  can_gateway,      3);
+    lm.addComponent("diagnostics",  diagnostics,      3);
+    lm.addComponent("doip",         doip_transport,   3);
+    lm.addComponent("docan",        docan_transport,   3);
 
-    // --- Run ---
-    std::printf("Starting systems...\n");
-    someip_system.run();
-    lighting.run();
-    door_lock.run();
-    vehicle_mode.run();
-    can_gateway.run();
-    diagnostics.run();
+    lm.transitionToLevel(3);
     button_adapter.start();
 
     std::printf("\nBody ECU ready. Press Ctrl+C to shut down.\n");
@@ -123,17 +111,9 @@ int main(int argc, char* argv[])
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
-    // --- Shutdown ---
     std::printf("\nShutting down...\n");
     button_adapter.stop();
-    can_gateway.shutdown();
-    diagnostics.shutdown();
-    doip_transport.shutdown();
-    docan_transport.shutdown();
-    lighting.shutdown();
-    door_lock.shutdown();
-    vehicle_mode.shutdown();
-    someip_system.shutdown();
+    lm.shutdownAll();
     can_adapter.close();
 
     std::printf("Body ECU stopped.\n");

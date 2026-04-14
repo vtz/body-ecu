@@ -1,22 +1,20 @@
 #pragma once
 
 #include "SomeIpSystem.h"
+#include "lifecycle/ILifecycleComponent.h"
 #include "lighting/LightingController.h"
 #include "ports/IGpioPort.h"
 
 namespace body_ecu::adapters {
 
-/// AsyncLifecycleComponent wrapper that owns a LightingController
-/// and injects platform adapters. Manages lifecycle for the OpenBSW
-/// LifecycleManager.
-class LightingSystem {
+class LightingSystem : public lifecycle::ILifecycleComponent {
 public:
     LightingSystem(ports::IGpioPort& gpio, SomeIpSystem& someip,
                    const body::LightingConfig& config = {});
 
-    void init();
-    void run();
-    void shutdown();
+    void init() override;
+    void run() override;
+    void shutdown() override;
 
     body::LightingController& controller() { return controller_; }
     const body::LightingController& controller() const { return controller_; }

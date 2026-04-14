@@ -36,22 +36,26 @@ set(LIBS_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../libs)
 # Port interfaces + mocks
 add_subdirectory(${LIBS_ROOT}/platform/ports ports)
 
-# Adapters: OpenBSW lifecycle wrappers + transports
-add_library(adapters_openbsw STATIC
-    ${LIBS_ROOT}/adapters/openbsw/src/SomeIpSystem.cpp
-    ${LIBS_ROOT}/adapters/openbsw/src/LightingSystem.cpp
-    ${LIBS_ROOT}/adapters/openbsw/src/DoorLockSystem.cpp
-    ${LIBS_ROOT}/adapters/openbsw/src/VehicleModeSystem.cpp
-    ${LIBS_ROOT}/adapters/openbsw/src/CanGatewaySystem.cpp
-    ${LIBS_ROOT}/adapters/openbsw/src/DiagnosticsSystem.cpp
-    ${LIBS_ROOT}/adapters/openbsw/src/DoIpTransport.cpp
-    ${LIBS_ROOT}/adapters/openbsw/src/DoCanTransport.cpp
+# Lifecycle manager
+add_subdirectory(${LIBS_ROOT}/platform/lifecycle lifecycle)
+
+# Adapters: system lifecycle wrappers + transports
+add_library(adapters_system STATIC
+    ${LIBS_ROOT}/adapters/system/src/SomeIpSystem.cpp
+    ${LIBS_ROOT}/adapters/system/src/LightingSystem.cpp
+    ${LIBS_ROOT}/adapters/system/src/DoorLockSystem.cpp
+    ${LIBS_ROOT}/adapters/system/src/VehicleModeSystem.cpp
+    ${LIBS_ROOT}/adapters/system/src/CanGatewaySystem.cpp
+    ${LIBS_ROOT}/adapters/system/src/DiagnosticsSystem.cpp
+    ${LIBS_ROOT}/adapters/system/src/DoIpTransport.cpp
+    ${LIBS_ROOT}/adapters/system/src/DoCanTransport.cpp
 )
-target_include_directories(adapters_openbsw PUBLIC
-    ${LIBS_ROOT}/adapters/openbsw/include
+target_include_directories(adapters_system PUBLIC
+    ${LIBS_ROOT}/adapters/system/include
 )
-target_link_libraries(adapters_openbsw PUBLIC ports lighting door_lock vehicle_mode can_gateway diagnostics)
-add_subdirectory(${LIBS_ROOT}/adapters/openbsw/tests adapters_openbsw_tests)
+target_link_libraries(adapters_system PUBLIC
+    ports lifecycle lighting door_lock vehicle_mode can_gateway diagnostics)
+add_subdirectory(${LIBS_ROOT}/adapters/system/tests adapters_system_tests)
 
 # Platform modules
 add_subdirectory(${LIBS_ROOT}/platform/config-loader config-loader)

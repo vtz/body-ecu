@@ -12,6 +12,7 @@ LOG_MODULE_REGISTER(body_ecu, LOG_LEVEL_INF);
 #include <zephyr/drivers/can.h>
 #endif
 
+#include "lifecycle/LifecycleManager.h"
 #include "CanGatewaySystem.h"
 #include "DiagnosticsSystem.h"
 #include "DoCanTransport.h"
@@ -36,12 +37,10 @@ int main(void)
     LOG_INF("Body ECU starting");
     LOG_INF("Platform: %s", CONFIG_BOARD);
 
-    // --- SOME/IP transport ---
     adapters::SomeIpConfig someip_cfg{.host = "0.0.0.0", .port = 30490};
     adapters::SomeIpSystem someip_system(someip_cfg);
 
 #ifdef CONFIG_GPIO
-    // --- GPIO adapter (on-board LEDs: LD1=green, LD2=yellow, LD3=red) ---
     static const struct gpio_dt_spec leds[] = {
         GPIO_DT_SPEC_GET_OR(DT_ALIAS(led0), gpios, {0}),
         GPIO_DT_SPEC_GET_OR(DT_ALIAS(led1), gpios, {0}),
@@ -55,7 +54,6 @@ int main(void)
     adapters::GpioAdapter gpio_adapter(pin_map);
     bool gpio_ok = gpio_adapter.configure();
 
-    // --- Button adapter (user button) ---
     static const struct gpio_dt_spec user_btn =
         GPIO_DT_SPEC_GET_OR(DT_ALIAS(sw0), gpios, {0});
     adapters::ButtonAdapter button_adapter(user_btn.port, user_btn.pin);
@@ -68,16 +66,13 @@ int main(void)
 #endif
 
 #ifdef CONFIG_CAN
-    // --- CAN adapter ---
     const struct device* can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
     adapters::CanAdapter can_adapter(can_dev);
     can_adapter.configure();
 #endif
 
-    // --- Signal bus ---
     adapters::LocalSignalBus signal_bus;
 
-    // --- Lifecycle systems ---
 #ifdef CONFIG_GPIO
     std::optional<adapters::LightingSystem> lighting;
     std::optional<adapters::DoorLockSystem> door_lock;
@@ -112,7 +107,6 @@ int main(void)
     can_gateway.addMapping(door_gw);
 #endif
 
-    // --- Diagnostics (dual transport: DoIP + DoCAN) ---
     adapters::DiagnosticsSystem diagnostics;
     adapters::DoIpTransport doip_transport;
 #ifdef CONFIG_CAN
@@ -130,36 +124,22 @@ int main(void)
     }
 #endif
 
-    // --- Init phase ---
-    LOG_INF("Initializing systems...");
-    someip_system.init();
+    lifecycle::LifecycleManager lm;
+    lm.addComponent("someip", someip_system, 1);
 #ifdef CONFIG_GPIO
-    if (lighting) lighting->init();
-    if (door_lock) door_lock->init();
+    if (lighting) lm.addComponent("lighting", *lighting, 2);
+    if (door_lock) lm.addComponent("door_lock", *door_lock, 2);
 #endif
-    vehicle_mode.init();
+    lm.addComponent("vehicle_mode", vehicle_mode, 2);
 #ifdef CONFIG_CAN
-    can_gateway.init();
+    lm.addComponent("can_gateway", can_gateway, 3);
+    lm.addComponent("docan", docan_transport, 3);
 #endif
-    diagnostics.init();
-    doip_transport.init();
-#ifdef CONFIG_CAN
-    docan_transport.init();
-#endif
+    lm.addComponent("diagnostics", diagnostics, 3);
+    lm.addComponent("doip", doip_transport, 3);
 
-    // --- Run phase ---
-    LOG_INF("Starting systems...");
-    someip_system.run();
-#ifdef CONFIG_GPIO
-    if (lighting) lighting->run();
-    if (door_lock) door_lock->run();
-#endif
-    vehicle_mode.run();
-#ifdef CONFIG_CAN
-    can_gateway.run();
-#endif
-    diagnostics.run();
-
+    LOG_INF("Transitioning to run level 3...");
+    lm.transitionToLevel(3);
     LOG_INF("Body ECU ready - all systems running");
 
     k_sleep(K_FOREVER);
