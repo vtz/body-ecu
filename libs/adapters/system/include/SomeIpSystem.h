@@ -19,6 +19,9 @@
 #include "someip/message.h"
 #include "transport/udp_transport.h"
 #include "transport/transport.h"
+#include "sd/sd_server.h"
+#include "sd/sd_client.h"
+#include "sd/sd_types.h"
 #endif
 
 namespace body_ecu::adapters {
@@ -53,6 +56,9 @@ struct SomeIpConfig {
     std::string host{"0.0.0.0"};
     uint16_t port{30490};
     SomeIpRole role{SomeIpRole::Server};
+    std::string sd_multicast{"239.255.255.251"};
+    uint16_t sd_port{30491};
+    uint32_t sd_offer_interval_ms{5000};
 };
 
 class SomeIpSystem : public lifecycle::ILifecycleComponent
@@ -124,6 +130,13 @@ private:
     std::set<someip::transport::Endpoint> known_clients_;
     someip::transport::Endpoint server_endpoint_;
     bool is_server_{false};
+
+    std::unique_ptr<someip::sd::SdServer> sd_server_;
+    std::unique_ptr<someip::sd::SdClient> sd_client_;
+
+    void initSd();
+    void shutdownSd();
+    void onServiceFound(const std::vector<someip::sd::ServiceInstance>& services);
 
     static ports::SomeIpMessage fromSomeIp(const someip::Message& msg);
     static someip::Message toSomeIp(const ports::SomeIpMessage& msg);

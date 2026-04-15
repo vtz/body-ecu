@@ -30,6 +30,88 @@ void SomeIpSystem::init() {
 #endif
 }
 
+#ifdef HAS_OPENSOMEIP
+void SomeIpSystem::initSd() {
+    someip::sd::SdConfig sd_cfg;
+    sd_cfg.multicast_address = config_.sd_multicast;
+    sd_cfg.multicast_port    = config_.sd_port;
+    sd_cfg.unicast_address   = config_.host;
+    sd_cfg.cyclic_offer      = std::chrono::milliseconds(config_.sd_offer_interval_ms);
+
+    if (is_server_) {
+        sd_server_ = std::make_unique<someip::sd::SdServer>(sd_cfg);
+        if (!sd_server_->initialize()) {
+            std::printf("[SOME/IP-SD] Failed to initialize SD server\n");
+            return;
+        }
+
+        someip::sd::ServiceInstance svc;
+        svc.service_id = 0x1001;
+        svc.instance_id = 0x0001;
+        svc.major_version = 1;
+        svc.ttl_seconds = 60;
+        std::string endpoint = config_.host + ":" + std::to_string(config_.port);
+        sd_server_->offer_service(svc, endpoint);
+
+        for (const auto& ev : events_) {
+            someip::sd::ServiceInstance ev_svc;
+            ev_svc.service_id = ev.service_id;
+            ev_svc.instance_id = 0x0001;
+            ev_svc.major_version = 1;
+            ev_svc.ttl_seconds = 60;
+            std::string ep = config_.host + ":" + std::to_string(config_.port);
+            sd_server_->offer_service(ev_svc, ep);
+        }
+
+        std::printf("[SOME/IP-SD] Server offering services on %s (multicast %s:%u)\n",
+                    endpoint.c_str(), config_.sd_multicast.c_str(), config_.sd_port);
+    } else {
+        sd_client_ = std::make_unique<someip::sd::SdClient>(sd_cfg);
+        if (!sd_client_->initialize()) {
+            std::printf("[SOME/IP-SD] Failed to initialize SD client\n");
+            return;
+        }
+
+        sd_client_->find_service(0x1001,
+            [this](const std::vector<someip::sd::ServiceInstance>& svcs) {
+                onServiceFound(svcs);
+            },
+            std::chrono::milliseconds(10000));
+
+        std::printf("[SOME/IP-SD] Client searching for services (multicast %s:%u)\n",
+                    config_.sd_multicast.c_str(), config_.sd_port);
+    }
+}
+
+void SomeIpSystem::shutdownSd() {
+    if (sd_server_) {
+        sd_server_->shutdown();
+        sd_server_.reset();
+    }
+    if (sd_client_) {
+        sd_client_->shutdown();
+        sd_client_.reset();
+    }
+}
+
+void SomeIpSystem::onServiceFound(
+    const std::vector<someip::sd::ServiceInstance>& services) {
+    for (const auto& svc : services) {
+        if (!svc.ip_address.empty() && svc.port != 0) {
+            std::printf("[SOME/IP-SD] Discovered service 0x%04X at %s:%u\n",
+                        svc.service_id, svc.ip_address.c_str(), svc.port);
+            server_endpoint_ = someip::transport::Endpoint(svc.ip_address, svc.port);
+
+            if (sd_client_) {
+                sd_client_->subscribe_eventgroup(svc.service_id, svc.instance_id, 0x0001);
+                std::printf("[SOME/IP-SD] Subscribed to eventgroup 0x0001 of service 0x%04X\n",
+                            svc.service_id);
+            }
+        }
+    }
+}
+#endif
+
 void SomeIpSystem::run() {
     running_ = true;
 #ifdef HAS_OPENSOMEIP
@@ -41,12 +123,14 @@ void SomeIpSystem::run() {
     }
     std::printf("[SOME/IP] Transport running on %s\n",
                 transport_->get_local_endpoint().to_string().c_str());
+    initSd();
 #endif
 }
 
 void SomeIpSystem::shutdown() {
     running_ = false;
 #ifdef HAS_OPENSOMEIP
+    shutdownSd();
     if (transport_) {
         transport_->stop();
         std::printf("[SOME/IP] Transport stopped\n");
