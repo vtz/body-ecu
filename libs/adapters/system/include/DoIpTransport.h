@@ -2,13 +2,16 @@
 
 #include <atomic>
 #include <cstdint>
-#include <mutex>
-#include <thread>
 #include <vector>
 
 #include "diagnostics/DoIpProtocol.h"
 #include "diagnostics/ITransportLayer.h"
 #include "lifecycle/ILifecycleComponent.h"
+
+#ifndef __ZEPHYR__
+#include <mutex>
+#include <thread>
+#endif
 
 namespace body_ecu::adapters {
 
@@ -36,21 +39,25 @@ public:
     void shutdown() override;
 
 private:
+#ifndef __ZEPHYR__
     void acceptLoop();
     void handleConnection(int fd);
     bool readExact(int fd, uint8_t* buf, size_t len);
     void sendRaw(const std::vector<uint8_t>& data);
+#endif
 
     platform::DiagRequestHandler handler_;
 
+    uint16_t port_;
     std::atomic<int> listen_fd_{-1};
     std::atomic<int> client_fd_{-1};
     std::atomic<bool> running_{false};
-    std::thread accept_thread_;
 
-    uint16_t port_;
+#ifndef __ZEPHYR__
+    std::thread accept_thread_;
     uint16_t tester_addr_{0};
     std::mutex send_mutex_;
+#endif
 };
 
 }  // namespace body_ecu::adapters

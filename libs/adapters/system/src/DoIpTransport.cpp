@@ -1,6 +1,35 @@
 #include "DoIpTransport.h"
 
 #include <cstdio>
+
+#ifdef __ZEPHYR__
+
+namespace body_ecu::adapters {
+
+DoIpTransport::~DoIpTransport() { shutdown(); }
+
+void DoIpTransport::setRequestHandler(platform::DiagRequestHandler handler) {
+    handler_ = std::move(handler);
+}
+
+void DoIpTransport::init() {
+    // DoIP TCP server not yet implemented on Zephyr.
+    // Requires CONFIG_NET_SOCKETS + Zephyr threading.
+    running_.store(true);
+    std::printf("[DoIP] Stub on Zephyr (TCP server not available)\n");
+}
+
+void DoIpTransport::shutdown() {
+    running_.store(false);
+    handler_ = nullptr;
+}
+
+void DoIpTransport::sendResponse(const platform::DiagResponse&) {}
+
+}  // namespace body_ecu::adapters
+
+#else  // POSIX
+
 #include <cstring>
 
 #include <arpa/inet.h>
@@ -115,12 +144,12 @@ void DoIpTransport::handleConnection(int fd) {
 
         if (hdr.version != kProtocolVersion || hdr.inverse != kInverseVersion) {
             auto nack = serializeHeader(PayloadType::GenericNack, 1);
-            nack.push_back(0x00);  // incorrect pattern
+            nack.push_back(0x00);
             sendRaw(nack);
             break;
         }
 
-        if (hdr.payload_length > 64 * 1024) break;  // sanity limit
+        if (hdr.payload_length > 64 * 1024) break;
 
         std::vector<uint8_t> payload(hdr.payload_length);
         if (hdr.payload_length > 0 &&
@@ -209,3 +238,5 @@ void DoIpTransport::sendResponse(const platform::DiagResponse& response) {
 }
 
 }  // namespace body_ecu::adapters
+
+#endif  // __ZEPHYR__
