@@ -54,7 +54,8 @@ target_include_directories(adapters_system PUBLIC
     ${LIBS_ROOT}/adapters/system/include
 )
 target_link_libraries(adapters_system PUBLIC
-    ports lifecycle lighting door_lock vehicle_mode can_gateway diagnostics)
+    ports lifecycle lighting door_lock vehicle_mode can_gateway diagnostics
+    pthread)
 add_subdirectory(${LIBS_ROOT}/adapters/system/tests adapters_system_tests)
 
 # Platform modules

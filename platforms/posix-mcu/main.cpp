@@ -11,6 +11,7 @@
 #include "DoCanTransport.h"
 #include "DoIpTransport.h"
 #include "DoorLockSystem.h"
+#include "VehicleInfoProvider.h"
 #include "LightingSystem.h"
 #include "SomeIpSystem.h"
 #include "VehicleModeSystem.h"
@@ -35,7 +36,8 @@ int main(int argc, char* argv[])
     std::signal(SIGTERM, signalHandler);
 
     std::printf("=== Body ECU (POSIX MCU) ===\n");
-    std::printf("SOME/IP server on 0.0.0.0:30490\n\n");
+    std::printf("SOME/IP server on 0.0.0.0:30490\n");
+    std::printf("DoIP  server on 0.0.0.0:13400\n\n");
 
     const char* can_iface = (argc > 1) ? argv[1] : "vcan0";
 
@@ -80,11 +82,16 @@ int main(int argc, char* argv[])
     door_gw.can_dlc = 2;
     can_gateway.addMapping(door_gw);
 
+    adapters::VehicleInfoProvider vehicle_info;
+    vehicle_info.setVin("WVW00000BODYECU01");
+    vehicle_info.setEcuSerial("BECU-MCU-001");
+
     adapters::DiagnosticsSystem diagnostics;
     adapters::DoIpTransport doip_transport;
     adapters::DoCanTransport docan_transport(can_adapter);
     diagnostics.addTransport(&doip_transport);
     diagnostics.addTransport(&docan_transport);
+    diagnostics.addProvider(&vehicle_info);
     diagnostics.addProvider(&lighting.controller());
     diagnostics.addProvider(&door_lock.controller());
 

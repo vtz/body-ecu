@@ -12,36 +12,28 @@ using platform::DiagRequest;
 using platform::DiagResponse;
 using ::testing::_;
 
+static uint16_t nextTestPort() {
+    static uint16_t port = 23400;
+    return port++;
+}
+
 TEST(DoIpTransportTest, InitAndShutdown) {
-    DoIpTransport transport;
-    EXPECT_FALSE(transport.isConnected());
+    DoIpTransport transport(nextTestPort());
+    EXPECT_FALSE(transport.isListening());
 
     transport.init();
-    EXPECT_TRUE(transport.isConnected());
+    EXPECT_TRUE(transport.isListening());
 
     transport.shutdown();
+    EXPECT_FALSE(transport.isListening());
+}
+
+TEST(DoIpTransportTest, NotConnectedInitially) {
+    DoIpTransport transport(nextTestPort());
     EXPECT_FALSE(transport.isConnected());
-}
-
-TEST(DoIpTransportTest, RequestHandlerDispatch) {
-    DoIpTransport transport;
     transport.init();
-
-    bool handler_called = false;
-    transport.setRequestHandler([&](const DiagRequest& req) -> DiagResponse {
-        handler_called = true;
-        return {static_cast<uint8_t>(req[0] + 0x40), req[1], req[2]};
-    });
-
-    transport.onDoIpRequest({0x22, 0xF1, 0x00});
-    EXPECT_TRUE(handler_called);
-}
-
-TEST(DoIpTransportTest, NoHandlerNoOp) {
-    DoIpTransport transport;
-    transport.init();
-    // Should not crash when no handler is set
-    transport.onDoIpRequest({0x22, 0xF1, 0x00});
+    EXPECT_FALSE(transport.isConnected());
+    transport.shutdown();
 }
 
 TEST(DoCanTransportTest, SingleFrameRequestDispatch) {

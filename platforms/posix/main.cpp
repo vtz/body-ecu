@@ -11,6 +11,7 @@
 #include "DoCanTransport.h"
 #include "DoIpTransport.h"
 #include "DoorLockSystem.h"
+#include "VehicleInfoProvider.h"
 #include "LightingSystem.h"
 #include "SomeIpSystem.h"
 #include "VehicleModeSystem.h"
@@ -80,11 +81,16 @@ int main(int argc, char* argv[])
     door_gw.can_dlc = 2;
     can_gateway.addMapping(door_gw);
 
+    adapters::VehicleInfoProvider vehicle_info;
+    vehicle_info.setVin("WVW00000BODYECU01");
+    vehicle_info.setEcuSerial("BECU-001");
+
     adapters::DiagnosticsSystem diagnostics;
     adapters::DoIpTransport doip_transport;
     adapters::DoCanTransport docan_transport(can_adapter);
     diagnostics.addTransport(&doip_transport);
     diagnostics.addTransport(&docan_transport);
+    diagnostics.addProvider(&vehicle_info);
     diagnostics.addProvider(&lighting.controller());
     diagnostics.addProvider(&door_lock.controller());
 

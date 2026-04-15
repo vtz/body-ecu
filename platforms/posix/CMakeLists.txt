@@ -54,4 +54,5 @@ target_link_libraries(body_ecu_posix PRIVATE
     adapters_system
     adapters_linux
     lifecycle
+    pthread
 )

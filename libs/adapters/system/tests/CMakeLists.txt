@@ -21,3 +21,11 @@ target_link_libraries(transport_test PRIVATE
     GTest::gtest_main
 )
 gtest_discover_tests(transport_test)
+
+add_executable(vehicle_info_test VehicleInfoTest.cpp)
+target_link_libraries(vehicle_info_test PRIVATE
+    adapters_system
+    port_mocks
+    GTest::gtest_main
+)
+gtest_discover_tests(vehicle_info_test)

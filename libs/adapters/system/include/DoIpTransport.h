@@ -1,8 +1,12 @@
 #pragma once
 
+#include <atomic>
 #include <cstdint>
+#include <mutex>
+#include <thread>
 #include <vector>
 
+#include "diagnostics/DoIpProtocol.h"
 #include "diagnostics/ITransportLayer.h"
 #include "lifecycle/ILifecycleComponent.h"
 
@@ -11,23 +15,42 @@ namespace body_ecu::adapters {
 class DoIpTransport : public lifecycle::ILifecycleComponent
                     , public platform::ITransportLayer {
 public:
-    static constexpr uint16_t kDoIpPort = 13400;
-    static constexpr uint16_t kLogicalAddress = 0x0E80;
+    static constexpr uint16_t kDefaultPort     = 13400;
+    static constexpr uint16_t kLogicalAddress  = 0x0E80;
+
+    explicit DoIpTransport(uint16_t port = kDefaultPort) : port_(port) {}
+    ~DoIpTransport() override;
+
+    DoIpTransport(const DoIpTransport&) = delete;
+    DoIpTransport& operator=(const DoIpTransport&) = delete;
 
     void setRequestHandler(platform::DiagRequestHandler handler) override;
     void sendResponse(const platform::DiagResponse& response) override;
 
-    void onDoIpRequest(const std::vector<uint8_t>& data);
-
-    bool isConnected() const { return connected_; }
+    bool isConnected() const { return client_fd_.load() >= 0; }
+    bool isListening() const { return listen_fd_.load() >= 0; }
+    uint16_t port() const { return port_; }
 
     void init() override;
     void run() override {}
     void shutdown() override;
 
 private:
+    void acceptLoop();
+    void handleConnection(int fd);
+    bool readExact(int fd, uint8_t* buf, size_t len);
+    void sendRaw(const std::vector<uint8_t>& data);
+
     platform::DiagRequestHandler handler_;
-    bool connected_{false};
+
+    std::atomic<int> listen_fd_{-1};
+    std::atomic<int> client_fd_{-1};
+    std::atomic<bool> running_{false};
+    std::thread accept_thread_;
+
+    uint16_t port_;
+    uint16_t tester_addr_{0};
+    std::mutex send_mutex_;
 };
 
 }  // namespace body_ecu::adapters
