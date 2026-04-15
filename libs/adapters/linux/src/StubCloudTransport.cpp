@@ -15,8 +15,11 @@ void StubCloudTransport::disconnect() {
 
 bool StubCloudTransport::publish(const std::string& subject,
                                  const std::vector<uint8_t>& data) {
-    std::printf("[StubCloud] PUBLISH %s (%zu bytes)\n", subject.c_str(),
-                data.size());
+    std::printf("[StubCloud] PUBLISH %s [", subject.c_str());
+    for (size_t i = 0; i < data.size(); ++i) {
+        std::printf("%s0x%02X", i ? " " : "", data[i]);
+    }
+    std::printf("]\n");
     return true;
 }
 

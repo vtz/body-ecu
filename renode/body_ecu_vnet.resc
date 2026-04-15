@@ -5,5 +5,5 @@ using sysbus
 
 include @${CURDIR}/body_ecu.resc
 
-emulation CreateTap "tap-renode" "tap-renode"
-connector Connect sysbus.ethernet tap-renode
+emulation CreateTap "tap-renode" "tap"
+connector Connect host.tap sysbus.ethernet

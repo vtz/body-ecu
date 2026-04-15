@@ -1,0 +1,21 @@
+:name: Body ECU (TAP)
+:description: Body ECU on STM32H753 with TAP interface for host SOME/IP communication
+
+using sysbus
+
+mach create "body_ecu"
+machine LoadPlatformDescription @platforms/boards/nucleo_h753zi.repl
+
+showAnalyzer usart3
+
+emulation CreateSwitch "switch0"
+connector Connect sysbus.ethernet switch0
+
+emulation CreateTap "tap0" "tap"
+connector Connect host.tap switch0
+
+macro reset
+"""
+    sysbus LoadELF $firmware
+"""
+runMacro $reset

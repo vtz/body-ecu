@@ -28,6 +28,7 @@ target_sources(app PRIVATE src/main.cpp)
 target_include_directories(app PRIVATE
     ${LIBS_ROOT}/adapters/system/include
     ${LIBS_ROOT}/adapters/zephyr/include
+    ${LIBS_ROOT}/platform/lifecycle/include
 )
 target_link_libraries(app PRIVATE
     ports
