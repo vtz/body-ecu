@@ -29,12 +29,14 @@ bool GpioAdapter::configure() {
 
 void GpioAdapter::write(uint32_t pin, bool value) {
     if (pin >= mappings_.size()) return;
+    if (!device_is_ready(mappings_[pin].port)) return;
     gpio_pin_set(mappings_[pin].port, mappings_[pin].pin,
                  value ? 1 : 0);
 }
 
 bool GpioAdapter::read(uint32_t pin) const {
     if (pin >= mappings_.size()) return false;
+    if (!device_is_ready(mappings_[pin].port)) return false;
     return gpio_pin_get(mappings_[pin].port, mappings_[pin].pin) != 0;
 }
 

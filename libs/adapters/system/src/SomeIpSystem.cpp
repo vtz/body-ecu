@@ -32,6 +32,10 @@ void SomeIpSystem::init() {
 
 #ifdef HAS_OPENSOMEIP
 void SomeIpSystem::initSd() {
+#ifdef __ZEPHYR__
+    std::printf("[SOME/IP-SD] Skipped on Zephyr (multicast TX poisons DMA in Renode)\n");
+    return;
+#endif
     someip::sd::SdConfig sd_cfg;
     sd_cfg.multicast_address = config_.sd_multicast;
     sd_cfg.multicast_port    = config_.sd_port;

@@ -62,7 +62,7 @@ int main(void)
         button_adapter.configure();
     }
     if (!gpio_ok) {
-        LOG_WRN("GPIO not available -- lighting/door-lock disabled (emulation?)");
+        LOG_WRN("GPIO not available -- using software-only door-lock (emulation)");
     }
 #endif
 
@@ -143,6 +143,48 @@ int main(void)
 #endif
     lm.addComponent("diagnostics", diagnostics, 3);
     lm.addComponent("doip", doip_transport, 3);
+
+#ifdef CONFIG_GPIO
+    if (!gpio_ok) {
+        static body::LockState sw_state = body::LockState::Unlocked;
+        body::DoorLockConfig cfg;
+        someip_system.registerMethod(cfg.service_id, cfg.lock_method,
+            [&](const ports::SomeIpMessage& req) {
+                auto old = sw_state;
+                sw_state = body::LockState::Locked;
+                someip_system.sendEvent(cfg.service_id,
+                    cfg.lock_state_changed_event,
+                    {static_cast<uint8_t>(old), static_cast<uint8_t>(sw_state)});
+                ports::SomeIpMessage resp = req;
+                resp.message_type = 0x80;
+                resp.return_code = 0x00;
+                return resp;
+            });
+        someip_system.registerMethod(cfg.service_id, cfg.unlock_method,
+            [&](const ports::SomeIpMessage& req) {
+                auto old = sw_state;
+                sw_state = body::LockState::Unlocked;
+                someip_system.sendEvent(cfg.service_id,
+                    cfg.lock_state_changed_event,
+                    {static_cast<uint8_t>(old), static_cast<uint8_t>(sw_state)});
+                ports::SomeIpMessage resp = req;
+                resp.message_type = 0x80;
+                resp.return_code = 0x00;
+                return resp;
+            });
+        someip_system.registerMethod(cfg.service_id, cfg.get_status_method,
+            [](const ports::SomeIpMessage& req) {
+                ports::SomeIpMessage resp = req;
+                resp.message_type = 0x80;
+                resp.return_code = 0x00;
+                resp.payload = {static_cast<uint8_t>(sw_state)};
+                return resp;
+            });
+        someip_system.registerEvent(cfg.service_id,
+            cfg.lock_state_changed_event, cfg.eventgroup_id);
+        LOG_INF("Registered software-only door-lock SOME/IP handlers");
+    }
+#endif
 
     LOG_INF("Transitioning to run level 3...");
     lm.transitionToLevel(3);

@@ -3,7 +3,7 @@
 
 using sysbus
 
-include @${CURDIR}/body_ecu.resc
+include @renode/body_ecu.resc
 
 emulation CreateTap "tap-renode" "tap"
 connector Connect host.tap sysbus.ethernet
