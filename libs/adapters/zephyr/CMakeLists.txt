@@ -8,6 +8,8 @@ zephyr_library_sources(
     src/GpioAdapter.cpp
     src/CanAdapter.cpp
     src/ButtonAdapter.cpp
+    src/LocalSignalBus.cpp
 )
 zephyr_library_include_directories(include)
 zephyr_library_link_libraries(ports)
+zephyr_library_compile_options(-Wno-vla -Wno-invalid-offsetof)

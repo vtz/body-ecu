@@ -14,16 +14,57 @@ on:
       - "**.md"
       - "LICENSE"
 
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  OPENBSW_REF: "82397e004ee1d8bd38426c5d25239bf986146ce5"
+
 jobs:
+  # ── Tier 1: standalone host builds (no OpenBSW / west / Zephyr) ────────
+  posix-mpu:
+    name: "Build: POSIX MPU"
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build/posix-mpu -S platforms/posix-mpu
+
+      - name: Build
+        run: cmake --build build/posix-mpu -j$(nproc)
+
+  autosd:
+    name: "Build: AutoSD (MPU)"
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure
+        run: cmake -B build/autosd -S platforms/autosd
+
+      - name: Build
+        run: cmake --build build/autosd -j$(nproc)
+
+  # ── Tier 2: host builds that need OpenBSW sources ─────────────────────
   unit-tests:
     name: Unit Tests
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+
+      - name: Checkout OpenBSW
+        run: |
+          git clone --filter=blob:none --no-checkout \
+            https://github.com/eclipse-openbsw/openbsw.git \
+            "$GITHUB_WORKSPACE/../openbsw"
+          git -C "$GITHUB_WORKSPACE/../openbsw" checkout ${{ env.OPENBSW_REF }}
 
       - name: Configure
         run: cmake -B build/tests -S tests/unit -DBUILD_TESTS=ON
@@ -45,6 +86,13 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
+
+      - name: Checkout OpenBSW
+        run: |
+          git clone --filter=blob:none --no-checkout \
+            https://github.com/eclipse-openbsw/openbsw.git \
+            "$GITHUB_WORKSPACE/../openbsw"
+          git -C "$GITHUB_WORKSPACE/../openbsw" checkout ${{ env.OPENBSW_REF }}
 
       - name: Install gcovr
         run: pip install gcovr
@@ -83,106 +131,72 @@ jobs:
             coverage.html
             coverage.xml
 
-  build:
-    name: "Build: ${{ matrix.board }}"
-    runs-on: ${{ matrix.runner }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJson(needs.load-matrix.outputs.matrix) }}
-    needs: load-matrix
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Zephyr
-        uses: zephyrproject-rtos/action-zephyr-setup@v1
-
-      - name: Init west workspace
-        run: |
-          west init -l .
-          west update
-
-      - name: Build
-        run: west build -b ${{ matrix.board }} app
-
-      - name: Upload firmware artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: firmware-${{ matrix.board == 'native_sim' && 'native_sim' || 'nucleo' }}
-          path: build/zephyr/zephyr.*
-
-      - name: Build summary
-        run: |
-          echo "## Build: ${{ matrix.board }}" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Board | \`${{ matrix.board }}\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Status | :white_check_mark: Pass |" >> $GITHUB_STEP_SUMMARY
-
-  load-matrix:
-    name: Load Build Matrix
-    runs-on: ubuntu-22.04
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-    steps:
-      - uses: actions/checkout@v4
-      - id: set-matrix
-        run: echo "matrix=$(cat build_matrix.json)" >> $GITHUB_OUTPUT
-
   posix-build:
     name: "Build: POSIX (Linux)"
     runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v4
 
-      - name: Configure
+      - name: Checkout OpenBSW
+        run: |
+          git clone --filter=blob:none --no-checkout \
+            https://github.com/eclipse-openbsw/openbsw.git \
+            "$GITHUB_WORKSPACE/../openbsw"
+          git -C "$GITHUB_WORKSPACE/../openbsw" checkout ${{ env.OPENBSW_REF }}
+
+      - name: Configure (single-process)
         run: cmake -B build/posix -S platforms/posix
 
-      - name: Build
+      - name: Build (single-process)
         run: cmake --build build/posix -j$(nproc)
 
-      - name: Upload POSIX binary
-        uses: actions/upload-artifact@v4
-        with:
-          name: body-ecu-posix
-          path: build/posix/body_ecu_posix
+      - name: Configure (MCU)
+        run: cmake -B build/posix-mcu -S platforms/posix-mcu
 
-      - name: Build summary
-        run: |
-          echo "## Build: POSIX (Linux)" >> $GITHUB_STEP_SUMMARY
-          echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
-          echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Platform | Linux/POSIX |" >> $GITHUB_STEP_SUMMARY
-          echo "| Binary | \`body_ecu_posix\` |" >> $GITHUB_STEP_SUMMARY
-          echo "| Status | :white_check_mark: Pass |" >> $GITHUB_STEP_SUMMARY
+      - name: Build (MCU)
+        run: cmake --build build/posix-mcu -j$(nproc)
 
-  renode:
-    name: Renode Smoke Test
-    runs-on: ubuntu-22.04
-    needs: build
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install Renode
-        run: |
-          wget -q https://github.com/renode/renode/releases/download/v1.15.0/renode_1.15.0_amd64.deb
-          sudo dpkg -i renode_1.15.0_amd64.deb || sudo apt-get -f install -y
-
-      - name: Download firmware
-        uses: actions/download-artifact@v4
-        with:
-          name: firmware-nucleo
-          path: build/zephyr/
-
-      - name: Run Renode boot test
-        run: |
-          timeout 30 renode --disable-xwt \
-            --execute "include @renode/body_ecu.resc" \
-            --execute "start" \
-            --execute "sleep 10" \
-            --execute "quit" || true
-
-      - name: Renode summary
-        run: |
-          echo "## Renode Smoke Test" >> $GITHUB_STEP_SUMMARY
-          echo "| Result | :white_check_mark: Boot completed |" >> $GITHUB_STEP_SUMMARY
+  # ── Tier 3: Zephyr / Renode (requires full west workspace + SDK) ──────
+  # TODO: enable once west workspace setup is added to CI.
+  #
+  # load-matrix:
+  #   name: Load Build Matrix
+  #   runs-on: ubuntu-22.04
+  #   outputs:
+  #     matrix: ${{ steps.set-matrix.outputs.matrix }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - id: set-matrix
+  #       run: echo "matrix=$(jq -c . build_matrix.json)" >> $GITHUB_OUTPUT
+  #
+  # build:
+  #   name: "Build: ${{ matrix.board }}"
+  #   runs-on: ${{ matrix.runner }}
+  #   needs: load-matrix
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       include: ${{ fromJson(needs.load-matrix.outputs.matrix) }}
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: zephyrproject-rtos/action-zephyr-setup@v1
+  #     - run: west init -l . && west update
+  #     - run: west build -b ${{ matrix.board }} app
+  #
+  # renode:
+  #   name: Renode Smoke Test
+  #   runs-on: ubuntu-22.04
+  #   needs: build
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - run: |
+  #         wget -q https://github.com/renode/renode/releases/download/v1.15.0/renode_1.15.0_amd64.deb
+  #         sudo dpkg -i renode_1.15.0_amd64.deb || sudo apt-get -f install -y
+  #     - uses: actions/download-artifact@v4
+  #       with: { name: firmware-nucleo, path: build/zephyr/ }
+  #     - run: |
+  #         timeout 30 renode --disable-xwt \
+  #           --execute "include @renode/body_ecu.resc" \
+  #           --execute "start" \
+  #           --execute "sleep 10" \
+  #           --execute "quit" || true

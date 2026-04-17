@@ -1,12 +1,24 @@
 #include "door_lock/DoorLockController.h"
 
+#ifdef __ZEPHYR__
+#include <zephyr/sys/printk.h>
+#else
+#include <cstdio>
+#define printk(...) std::printf(__VA_ARGS__)
+#endif
+
 namespace body_ecu::body {
 
 DoorLockController::DoorLockController(ports::IGpioPort& gpio,
                                        ports::IButtonInput& button,
                                        ports::ISomeIpService& someip,
-                                       const DoorLockConfig& config)
-    : gpio_(gpio), button_(button), someip_(someip), config_(config) {}
+                                       const DoorLockConfig& config,
+                                       ports::ISignalBus* signal_bus)
+    : gpio_(gpio),
+      button_(button),
+      someip_(someip),
+      config_(config),
+      signal_bus_(signal_bus) {}
 
 void DoorLockController::init() {
     someip_.registerMethod(config_.service_id, config_.lock_method,
@@ -26,11 +38,40 @@ void DoorLockController::init() {
                           config_.eventgroup_id);
 
     button_.onPress([this]() { onButtonPress(); });
+
+    if (signal_bus_) {
+        signal_bus_->subscribe(
+            config_.signal_command_lock,
+            [this](const std::string& path, const ports::SignalValue& value) {
+                onCommandSignal(path, value);
+            });
+    }
+}
+
+bool DoorLockController::checkSafetyConstraints() const {
+    if (!signal_bus_) return true;
+
+    auto speed = signal_bus_->get(config_.signal_speed);
+    if (speed) {
+        if (auto* f = std::get_if<float>(&*speed)) {
+            if (*f > 0.0f) return false;
+        }
+    }
+
+    auto door_open = signal_bus_->get(config_.signal_door_open);
+    if (door_open) {
+        if (auto* b = std::get_if<bool>(&*door_open)) {
+            if (*b) return false;
+        }
+    }
+
+    return true;
 }
 
 bool DoorLockController::lock() {
     if (state_ == LockState::Error) return false;
     if (state_ == LockState::Locked) return true;
+    if (!checkSafetyConstraints()) return false;
 
     LockState old = state_;
     state_ = LockState::Locked;
@@ -42,6 +83,7 @@ bool DoorLockController::lock() {
 bool DoorLockController::unlock() {
     if (state_ == LockState::Error) return false;
     if (state_ == LockState::Unlocked) return true;
+    if (!checkSafetyConstraints()) return false;
 
     LockState old = state_;
     state_ = LockState::Unlocked;
@@ -81,9 +123,25 @@ bool DoorLockController::ioControl(
 
 void DoorLockController::onButtonPress() {
     if (state_ == LockState::Locked) {
+        printk("[door_lock] Button pressed -- unlocking\n");
         unlock();
     } else if (state_ == LockState::Unlocked) {
+        printk("[door_lock] Button pressed -- locking\n");
         lock();
+    }
+}
+
+void DoorLockController::onCommandSignal(const std::string& /*path*/,
+                                         const ports::SignalValue& value) {
+    auto* cmd = std::get_if<bool>(&value);
+    if (!cmd) return;
+
+    bool success = *cmd ? lock() : unlock();
+
+    if (signal_bus_) {
+        uint8_t response_code = success ? 0x00 : 0x01;
+        signal_bus_->publish(config_.signal_command_response,
+                             ports::SignalValue{static_cast<int32_t>(response_code)});
     }
 }
 
@@ -118,6 +176,11 @@ void DoorLockController::publishStateChanged(LockState old_state,
                                     static_cast<uint8_t>(new_state)};
     someip_.sendEvent(config_.service_id, config_.lock_state_changed_event,
                       payload);
+
+    if (signal_bus_) {
+        signal_bus_->publish(config_.signal_is_locked,
+                             ports::SignalValue{new_state == LockState::Locked});
+    }
 }
 
 }  // namespace body_ecu::body

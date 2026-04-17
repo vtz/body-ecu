@@ -6,6 +6,7 @@
 #include "ports/IDiagDataProvider.h"
 #include "ports/IGpioPort.h"
 #include "ports/IModeObserver.h"
+#include "ports/ISignalBus.h"
 #include "ports/ISomeIpService.h"
 
 namespace body_ecu::body {
@@ -25,6 +26,14 @@ struct DoorLockConfig {
     uint16_t eventgroup_id{0x0001};
     uint32_t lock_gpio_pin{10};
     uint16_t diag_did{0xF101};
+
+    std::string signal_is_locked{
+        "Vehicle.Cabin.Door.Row1.DriverSide.IsLocked"};
+    std::string signal_command_lock{"Vehicle.Command.Door.Lock"};
+    std::string signal_command_response{"Vehicle.Command.Door.Response"};
+    std::string signal_speed{"Vehicle.Speed"};
+    std::string signal_door_open{
+        "Vehicle.Cabin.Door.Row1.DriverSide.IsOpen"};
 };
 
 class DoorLockController : public ports::IModeObserver,
@@ -32,7 +41,8 @@ class DoorLockController : public ports::IModeObserver,
 public:
     DoorLockController(ports::IGpioPort& gpio, ports::IButtonInput& button,
                        ports::ISomeIpService& someip,
-                       const DoorLockConfig& config = {});
+                       const DoorLockConfig& config = {},
+                       ports::ISignalBus* signal_bus = nullptr);
 
     void init();
 
@@ -57,11 +67,15 @@ private:
     ports::SomeIpMessage handleGetStatus(const ports::SomeIpMessage& request);
     void publishStateChanged(LockState old_state, LockState new_state);
     void onButtonPress();
+    void onCommandSignal(const std::string& path,
+                         const ports::SignalValue& value);
+    bool checkSafetyConstraints() const;
 
     ports::IGpioPort& gpio_;
     ports::IButtonInput& button_;
     ports::ISomeIpService& someip_;
     DoorLockConfig config_;
+    ports::ISignalBus* signal_bus_;
     LockState state_{LockState::Unlocked};
 };
 

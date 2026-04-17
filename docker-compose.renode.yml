@@ -1,0 +1,27 @@
+# Run Renode (MCU) + POSIX MPU inside a container with TAP networking.
+#
+# Usage:
+#   docker compose -f docker-compose.renode.yml build
+#   docker compose -f docker-compose.renode.yml run body-ecu bash
+#
+# Inside the container:
+#   ./scripts/renode_someip_test.sh
+
+services:
+  body-ecu:
+    build:
+      context: .
+      dockerfile: Dockerfile.renode
+    volumes:
+      - ..:/workspace
+    working_dir: /workspace/body-ecu
+    environment:
+      - ZEPHYR_BASE=/workspace/zephyr
+      - ZEPHYR_TOOLCHAIN_VARIANT=zephyr
+    cap_add:
+      - NET_ADMIN
+    devices:
+      - /dev/net/tun:/dev/net/tun
+    network_mode: host
+    stdin_open: true
+    tty: true

@@ -1,0 +1,29 @@
+Vehicle.Cabin.Door.Row1.DriverSide.IsLocked:
+  type: actuator
+  datatype: boolean
+  description: "Door lock state (true=locked)"
+
+Vehicle.Cabin.Door.Row1.DriverSide.IsOpen:
+  type: sensor
+  datatype: boolean
+  description: "Door ajar sensor (true=open)"
+
+Vehicle.Command.Door.Lock:
+  type: actuator
+  datatype: boolean
+  description: "Remote lock command (true=lock, false=unlock)"
+
+Vehicle.Command.Door.Response:
+  type: sensor
+  datatype: uint8
+  description: "Lock command result (0x00=success, 0x01=rejected)"
+
+Vehicle.Speed:
+  type: sensor
+  datatype: float
+  description: "Vehicle speed in km/h"
+
+Vehicle.Parking.SessionActive:
+  type: sensor
+  datatype: boolean
+  description: "Parking session active flag (set by PARKING_OPERATOR_ADAPTOR)"

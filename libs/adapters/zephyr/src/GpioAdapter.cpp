@@ -2,25 +2,22 @@
 
 #include "zephyr_adapters/GpioAdapter.h"
 
-#include <zephyr/logging/log.h>
-
-LOG_MODULE_REGISTER(gpio_adapter, LOG_LEVEL_INF);
+#include <zephyr/sys/printk.h>
 
 namespace body_ecu::adapters {
 
-GpioAdapter::GpioAdapter(const std::vector<PinMapping>& mappings)
-    : mappings_(mappings) {}
+GpioAdapter::GpioAdapter(const std::vector<struct gpio_dt_spec>& specs)
+    : specs_(specs) {}
 
 bool GpioAdapter::configure() {
-    for (const auto& m : mappings_) {
-        if (!device_is_ready(m.port)) {
-            LOG_ERR("GPIO port not ready for pin %d", m.pin);
+    for (size_t i = 0; i < specs_.size(); i++) {
+        if (!gpio_is_ready_dt(&specs_[i])) {
+            printk("[gpio] Port not ready for LED %zu (pin %d)\n", i, specs_[i].pin);
             return false;
         }
-        int ret = gpio_pin_configure(m.port, m.pin,
-                                     m.flags | GPIO_OUTPUT_INACTIVE);
+        int ret = gpio_pin_configure_dt(&specs_[i], GPIO_OUTPUT_INACTIVE);
         if (ret < 0) {
-            LOG_ERR("Failed to configure GPIO pin %d: %d", m.pin, ret);
+            printk("[gpio] Failed to configure LED %zu (pin %d): %d\n", i, specs_[i].pin, ret);
             return false;
         }
     }
@@ -28,14 +25,15 @@ bool GpioAdapter::configure() {
 }
 
 void GpioAdapter::write(uint32_t pin, bool value) {
-    if (pin >= mappings_.size()) return;
-    gpio_pin_set(mappings_[pin].port, mappings_[pin].pin,
-                 value ? 1 : 0);
+    if (pin >= specs_.size()) return;
+    if (!gpio_is_ready_dt(&specs_[pin])) return;
+    gpio_pin_set_dt(&specs_[pin], value ? 1 : 0);
 }
 
 bool GpioAdapter::read(uint32_t pin) const {
-    if (pin >= mappings_.size()) return false;
-    return gpio_pin_get(mappings_[pin].port, mappings_[pin].pin) != 0;
+    if (pin >= specs_.size()) return false;
+    if (!gpio_is_ready_dt(&specs_[pin])) return false;
+    return gpio_pin_get_dt(&specs_[pin]) != 0;
 }
 
 }  // namespace body_ecu::adapters

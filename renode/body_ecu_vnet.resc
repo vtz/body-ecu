@@ -1,0 +1,9 @@
+:name: Body ECU (Virtual Network)
+:description: Body ECU on STM32H753 with TAP bridge for MPU integration
+
+using sysbus
+
+include @renode/body_ecu.resc
+
+emulation CreateTap "tap-renode" "tap"
+connector Connect host.tap sysbus.ethernet

@@ -1,0 +1,39 @@
+# Renode + Zephyr development container for Body ECU.
+# Builds on the Zephyr CI image (which includes the SDK and west),
+# adds Renode, networking tools, and a C++ toolchain for POSIX builds.
+#
+# The host west workspace is mounted at /workspace -- no Zephyr download needed.
+#
+# Usage:
+#   docker compose -f docker-compose.renode.yml build
+#   docker compose -f docker-compose.renode.yml run body-ecu bash
+
+FROM ghcr.io/zephyrproject-rtos/ci:v0.27.4
+
+ARG RENODE_VER=1.16.1
+ENV RENODE_VERSION=$RENODE_VER
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    iproute2 \
+    net-tools \
+    iputils-ping \
+    bridge-utils \
+    socat \
+    g++ \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN ARCH=$(uname -m) \
+    && case "${ARCH}" in \
+        aarch64) RENODE_ARCH="linux-arm64-portable-dotnet" ;; \
+        *)       RENODE_ARCH="linux-portable-dotnet"       ;; \
+    esac \
+    && echo "Downloading Renode ${RENODE_VERSION} for ${ARCH} (${RENODE_ARCH})..." \
+    && wget -q "https://github.com/renode/renode/releases/download/v${RENODE_VERSION}/renode-${RENODE_VERSION}.${RENODE_ARCH}.tar.gz" \
+    && mkdir -p /opt/renode \
+    && tar xzf "renode-${RENODE_VERSION}.${RENODE_ARCH}.tar.gz" -C /opt/renode --strip-components=1 \
+    && rm "renode-${RENODE_VERSION}.${RENODE_ARCH}.tar.gz" \
+    && ln -s /opt/renode/renode /usr/local/bin/renode
+
+WORKDIR /workspace/body-ecu

@@ -1,0 +1,23 @@
+mappings:
+  - signal: "Vehicle.Cabin.Door.Row1.DriverSide.IsLocked"
+    direction: event_to_signal
+    someip:
+      service_id: 0x1001
+      event_id: 0x8001
+      eventgroup_id: 0x0001
+    payload_offset: 1
+    payload_type: bool
+
+  - signal: "Vehicle.Command.Door.Lock"
+    direction: signal_to_method
+    someip:
+      service_id: 0x1001
+      method_id: 0x0001
+    payload_type: bool
+
+  - signal: "Vehicle.Command.Door.Unlock"
+    direction: signal_to_method
+    someip:
+      service_id: 0x1001
+      method_id: 0x0002
+    payload_type: bool

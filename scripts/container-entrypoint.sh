@@ -1,4 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
-cd /workdir/body-ecu
+cd /workdir
 exec "${@:-/bin/bash}"

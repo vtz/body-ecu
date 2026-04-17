@@ -5,7 +5,6 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/kernel.h>
 
-#include <array>
 #include <cstdint>
 #include <vector>
 
@@ -14,18 +13,12 @@
 namespace body_ecu::adapters {
 
 /// Zephyr GPIO adapter implementing IGpioPort.
-/// Maps virtual pin numbers to Zephyr GPIO device/pin pairs.
-/// On NUCLEO-H755ZI-Q, pins 0-2 map to on-board LEDs
+/// Uses gpio_dt_spec for correct active-level handling.
+/// On NUCLEO-H753ZI, pins 0-2 map to on-board LEDs
 /// (green=LD1, yellow=LD2, red=LD3).
 class GpioAdapter : public ports::IGpioPort {
 public:
-    struct PinMapping {
-        const struct device* port;
-        gpio_pin_t pin;
-        gpio_flags_t flags;
-    };
-
-    explicit GpioAdapter(const std::vector<PinMapping>& mappings);
+    explicit GpioAdapter(const std::vector<struct gpio_dt_spec>& specs);
 
     bool configure();
 
@@ -33,7 +26,7 @@ public:
     bool read(uint32_t pin) const override;
 
 private:
-    std::vector<PinMapping> mappings_;
+    std::vector<struct gpio_dt_spec> specs_;
 };
 
 }  // namespace body_ecu::adapters

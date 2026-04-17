@@ -1,0 +1,22 @@
+targets:
+  mcu:
+    platform: zephyr
+    board: nucleo_h755zi_q/stm32h755xx/m7
+    components:
+      - locking_service
+      - lighting
+      - vehicle_mode
+      - can_gateway
+      - diagnostics
+    signal_bus: local
+    cloud_transport: none
+
+  mpu:
+    platform: autosd
+    components:
+      - cloud_gateway_client
+      - data_broker_client
+      - someip_kuksa_bridge
+    signal_bus: kuksa
+    cloud_transport: nats
+    someip_bridge: signal_bridge.yaml

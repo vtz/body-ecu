@@ -30,6 +30,14 @@ services:
     eventgroups:
       door_events: 0x0001
 
+  cloud_gateway:
+    vin: "WVWZZZ3CZWE000001"
+    nats_url: "nats://localhost:4222"
+    subjects:
+      command_door_lock: "vehicles.{vin}.command.door.lock"
+      command_door_response: "vehicles.{vin}.command.door.response"
+      state_door_locked: "vehicles.{vin}.state.door.locked"
+
   vehicle_mode:
     service_id: 0x1002
     instance_id: 0x0001
