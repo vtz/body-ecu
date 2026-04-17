@@ -25,7 +25,6 @@ add_library(someip_system STATIC
 )
 target_include_directories(someip_system PUBLIC
     ${LIBS_ROOT}/adapters/system/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
 )
 target_link_libraries(someip_system PUBLIC ports lifecycle someip-transport)
 target_compile_definitions(someip_system PUBLIC HAS_OPENSOMEIP)
