@@ -28,6 +28,7 @@ void SomeIpSystem::init() {
                 is_server_ ? "server" : "client -> ",
                 config_.host.c_str(), config_.port);
 #endif
+    transitionDone();
 }
 
 #ifdef HAS_OPENSOMEIP
@@ -129,6 +130,7 @@ void SomeIpSystem::run() {
                 transport_->get_local_endpoint().to_string().c_str());
     initSd();
 #endif
+    transitionDone();
 }
 
 void SomeIpSystem::shutdown() {
@@ -143,6 +145,7 @@ void SomeIpSystem::shutdown() {
     PlatformLockGuard lock(mutex_);
     methods_.clear();
     events_.clear();
+    transitionDone();
 }
 
 void SomeIpSystem::registerMethod(uint16_t service_id, uint16_t method_id,

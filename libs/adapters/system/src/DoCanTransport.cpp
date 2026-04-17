@@ -28,10 +28,12 @@ void DoCanTransport::sendResponse(const platform::DiagResponse& response) {
 
 void DoCanTransport::init() {
     can_.setRxCallback([this](const ports::CanFrame& f) { onCanFrame(f); });
+    transitionDone();
 }
 
 void DoCanTransport::shutdown() {
     handler_ = nullptr;
+    transitionDone();
 }
 
 void DoCanTransport::onCanFrame(const ports::CanFrame& frame) {

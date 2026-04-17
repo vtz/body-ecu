@@ -1,0 +1,2 @@
+add_library(asyncCoreConfiguration INTERFACE)
+target_include_directories(asyncCoreConfiguration INTERFACE include)

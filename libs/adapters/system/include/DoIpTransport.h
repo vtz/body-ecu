@@ -6,7 +6,7 @@
 
 #include "diagnostics/DoIpProtocol.h"
 #include "diagnostics/ITransportLayer.h"
-#include "lifecycle/ILifecycleComponent.h"
+#include <lifecycle/SimpleLifecycleComponent.h>
 
 #ifndef __ZEPHYR__
 #include <mutex>
@@ -15,7 +15,7 @@
 
 namespace body_ecu::adapters {
 
-class DoIpTransport : public lifecycle::ILifecycleComponent
+class DoIpTransport : public lifecycle::SimpleLifecycleComponent
                     , public platform::ITransportLayer {
 public:
     static constexpr uint16_t kDefaultPort     = 13400;

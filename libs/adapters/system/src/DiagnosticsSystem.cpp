@@ -19,16 +19,15 @@ void DiagnosticsSystem::init() {
                 return handler_.handleRequest(req);
             });
     }
+    transitionDone();
 }
 
 void DiagnosticsSystem::run() {
-    // Transports are event-driven (DoIP: TCP accept loop, DoCAN: CAN rx).
-    // In the full OpenBSW build, DoIpServerSystem and DoCanSystem run
-    // as separate AsyncLifecycleComponents managed by LifecycleManager.
+    transitionDone();
 }
 
 void DiagnosticsSystem::shutdown() {
-    // Transports shut down independently via their own lifecycle.
+    transitionDone();
 }
 
 }  // namespace body_ecu::adapters

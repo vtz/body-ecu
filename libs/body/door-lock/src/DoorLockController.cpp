@@ -1,5 +1,12 @@
 #include "door_lock/DoorLockController.h"
 
+#ifdef __ZEPHYR__
+#include <zephyr/sys/printk.h>
+#else
+#include <cstdio>
+#define printk(...) std::printf(__VA_ARGS__)
+#endif
+
 namespace body_ecu::body {
 
 DoorLockController::DoorLockController(ports::IGpioPort& gpio,
@@ -116,8 +123,10 @@ bool DoorLockController::ioControl(
 
 void DoorLockController::onButtonPress() {
     if (state_ == LockState::Locked) {
+        printk("[door_lock] Button pressed -- unlocking\n");
         unlock();
     } else if (state_ == LockState::Unlocked) {
+        printk("[door_lock] Button pressed -- locking\n");
         lock();
     }
 }

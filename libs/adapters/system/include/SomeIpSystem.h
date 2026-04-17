@@ -12,7 +12,7 @@
 #include <thread>
 #endif
 
-#include "lifecycle/ILifecycleComponent.h"
+#include <lifecycle/SimpleLifecycleComponent.h>
 #include "ports/ISomeIpService.h"
 
 #ifdef HAS_OPENSOMEIP
@@ -61,7 +61,7 @@ struct SomeIpConfig {
     uint32_t sd_offer_interval_ms{5000};
 };
 
-class SomeIpSystem : public lifecycle::ILifecycleComponent
+class SomeIpSystem : public lifecycle::SimpleLifecycleComponent
                    , public ports::ISomeIpService
 #ifdef HAS_OPENSOMEIP
                    , public someip::transport::ITransportListener

@@ -2,14 +2,14 @@
 
 #include "SomeIpSystem.h"
 #include "door_lock/DoorLockController.h"
-#include "lifecycle/ILifecycleComponent.h"
+#include <lifecycle/SimpleLifecycleComponent.h>
 #include "ports/IButtonInput.h"
 #include "ports/IGpioPort.h"
 #include "ports/ISignalBus.h"
 
 namespace body_ecu::adapters {
 
-class DoorLockSystem : public lifecycle::ILifecycleComponent {
+class DoorLockSystem : public lifecycle::SimpleLifecycleComponent {
 public:
     DoorLockSystem(ports::IGpioPort& gpio, ports::IButtonInput& button,
                    SomeIpSystem& someip,

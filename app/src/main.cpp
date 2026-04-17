@@ -12,7 +12,11 @@ LOG_MODULE_REGISTER(body_ecu, LOG_LEVEL_INF);
 #include <zephyr/drivers/can.h>
 #endif
 
-#include "lifecycle/LifecycleManager.h"
+#include <async/AsyncBinding.h>
+#include <lifecycle/LifecycleManager.h>
+#include <bsp/timer/SystemTimer.h>
+#include <util/estd/assert.h>
+
 #include "CanGatewaySystem.h"
 #include "DiagnosticsSystem.h"
 #include "DoCanTransport.h"
@@ -33,13 +37,65 @@ LOG_MODULE_REGISTER(body_ecu, LOG_LEVEL_INF);
 
 using namespace body_ecu;
 
+using AsyncAdapter        = ::async::AsyncBinding::AdapterType;
+using AsyncRuntimeMonitor = ::async::AsyncBinding::RuntimeMonitorType;
+using AsyncContextHook    = ::async::AsyncBinding::ContextHookType;
+
+static constexpr size_t MaxNumComponents         = 16;
+static constexpr size_t MaxNumLevels             = 8;
+static constexpr size_t MaxNumComponentsPerLevel = MaxNumComponents;
+
+using LifecycleManager = ::lifecycle::declare::
+    LifecycleManager<MaxNumComponents, MaxNumLevels, MaxNumComponentsPerLevel>;
+
+static char const* const isrGroupNames[ISR_GROUP_COUNT] = {"test"};
+
+static AsyncRuntimeMonitor runtimeMonitor{
+    AsyncContextHook::InstanceType::GetNameType::create<&AsyncAdapter::getTaskName>(),
+    isrGroupNames};
+
+static LifecycleManager lifecycleManager{
+    TASK_SYSADMIN,
+    ::lifecycle::LifecycleManager::GetTimestampType::create<&getSystemTimeUs32Bit>()};
+
+K_THREAD_STACK_DEFINE(sysadminStack, 1024);
+using SysadminTask = AsyncAdapter::Task<TASK_SYSADMIN, K_THREAD_STACK_SIZEOF(sysadminStack)>;
+SysadminTask sysadminTask{"sysadmin", sysadminStack};
+
+K_THREAD_STACK_DEFINE(bodyStack, 4 * 1024);
+using BodyTask = AsyncAdapter::Task<TASK_BODY, K_THREAD_STACK_SIZEOF(bodyStack)>;
+BodyTask bodyTask{"body", bodyStack};
+
+K_THREAD_STACK_DEFINE(someipStack, 2 * 1024);
+using SomeIpTask = AsyncAdapter::Task<TASK_SOMEIP, K_THREAD_STACK_SIZEOF(someipStack)>;
+SomeIpTask someipTask{"someip", someipStack};
+
+K_THREAD_STACK_DEFINE(diagStack, 2 * 1024);
+using DiagTask = AsyncAdapter::Task<TASK_DIAG, K_THREAD_STACK_SIZEOF(diagStack)>;
+DiagTask diagTask{"diag", diagStack};
+
+K_THREAD_STACK_DEFINE(backgroundStack, 1024);
+using BackgroundTask = AsyncAdapter::Task<TASK_BACKGROUND, K_THREAD_STACK_SIZEOF(backgroundStack)>;
+BackgroundTask backgroundTask{"background", backgroundStack};
+
+AsyncContextHook contextHook{runtimeMonitor};
+
 int main(void)
 {
-    LOG_INF("Body ECU starting");
+    ::estd::set_assert_handler(
+        [](char const* file, int line, char const* expr) {
+            printk("\n*** ASSERT FAILED: file=%s line=%d expr=%s\n",
+                   file ? file : "(null)", line, expr ? expr : "(null)");
+            k_panic();
+        });
+
+    LOG_INF("Body ECU starting (Zephyr + OpenBSW)");
     LOG_INF("Platform: %s", CONFIG_BOARD);
 
+    AsyncAdapter::init();
+
     adapters::SomeIpConfig someip_cfg{.host = "0.0.0.0", .port = 30490};
-    adapters::SomeIpSystem someip_system(someip_cfg);
+    static adapters::SomeIpSystem someip_system(someip_cfg);
 
 #ifdef CONFIG_GPIO
     static const struct gpio_dt_spec leds[] = {
@@ -48,16 +104,13 @@ int main(void)
         GPIO_DT_SPEC_GET_OR(DT_ALIAS(led2), gpios, {0}),
     };
 
-    std::vector<adapters::GpioAdapter::PinMapping> pin_map;
-    for (const auto& led : leds) {
-        pin_map.push_back({led.port, led.pin, GPIO_ACTIVE_HIGH});
-    }
-    adapters::GpioAdapter gpio_adapter(pin_map);
+    std::vector<struct gpio_dt_spec> led_specs(std::begin(leds), std::end(leds));
+    static adapters::GpioAdapter gpio_adapter(led_specs);
     bool gpio_ok = gpio_adapter.configure();
 
     static const struct gpio_dt_spec user_btn =
         GPIO_DT_SPEC_GET_OR(DT_ALIAS(sw0), gpios, {0});
-    adapters::ButtonAdapter button_adapter(user_btn.port, user_btn.pin);
+    static adapters::ButtonAdapter button_adapter(user_btn);
     if (gpio_ok) {
         button_adapter.configure();
     }
@@ -66,27 +119,35 @@ int main(void)
     }
 #endif
 
+    LOG_INF("CP1: after GPIO");
+
 #ifdef CONFIG_CAN
     const struct device* can_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_canbus));
-    adapters::CanAdapter can_adapter(can_dev);
+    static adapters::CanAdapter can_adapter(can_dev);
     can_adapter.configure();
 #endif
 
-    adapters::LocalSignalBus signal_bus;
+    LOG_INF("CP2: creating LocalSignalBus");
+    static adapters::LocalSignalBus signal_bus;
+    LOG_INF("CP3: LocalSignalBus done");
 
 #ifdef CONFIG_GPIO
     std::optional<adapters::LightingSystem> lighting;
     std::optional<adapters::DoorLockSystem> door_lock;
     if (gpio_ok) {
         lighting.emplace(gpio_adapter, someip_system);
+        body::DoorLockConfig door_cfg;
+        door_cfg.lock_gpio_pin = 2;
         door_lock.emplace(gpio_adapter, button_adapter, someip_system,
-                          body::DoorLockConfig{}, &signal_bus);
+                          door_cfg, &signal_bus);
     }
 #endif
-    adapters::VehicleModeSystem vehicle_mode(someip_system);
+    LOG_INF("CP4: creating VehicleModeSystem");
+    static adapters::VehicleModeSystem vehicle_mode(someip_system);
+    LOG_INF("CP5: VehicleModeSystem done");
 
 #ifdef CONFIG_CAN
-    adapters::CanGatewaySystem can_gateway(can_adapter, someip_system);
+    static adapters::CanGatewaySystem can_gateway(can_adapter, someip_system);
 
     platform::ServiceMapping light_gw;
     light_gw.name = "light_command";
@@ -108,18 +169,22 @@ int main(void)
     can_gateway.addMapping(door_gw);
 #endif
 
-    adapters::VehicleInfoProvider vehicle_info;
+    LOG_INF("CP6: creating VehicleInfoProvider");
+    static adapters::VehicleInfoProvider vehicle_info;
     vehicle_info.setVin("WVW00000BODYECU01");
     vehicle_info.setEcuSerial("BECU-ZEP-001");
 
-    adapters::DiagnosticsSystem diagnostics;
-    adapters::DoIpTransport doip_transport;
+    LOG_INF("CP7: creating DiagnosticsSystem");
+    static adapters::DiagnosticsSystem diagnostics;
+    LOG_INF("CP8: creating DoIpTransport");
+    static adapters::DoIpTransport doip_transport;
 #ifdef CONFIG_CAN
-    adapters::DoCanTransport docan_transport(can_adapter);
+    static adapters::DoCanTransport docan_transport(can_adapter);
     diagnostics.addTransport(&docan_transport);
 #endif
     diagnostics.addTransport(&doip_transport);
     diagnostics.addProvider(&vehicle_info);
+    LOG_INF("CP9: diagnostics wired");
 
 #ifdef CONFIG_GPIO
     if (lighting && door_lock) {
@@ -130,20 +195,21 @@ int main(void)
     }
 #endif
 
-    lifecycle::LifecycleManager lm;
-    lm.addComponent("someip", someip_system, 1);
+    LOG_INF("CP10: adding lifecycle components");
+    lifecycleManager.addComponent("someip", someip_system, 1);
 #ifdef CONFIG_GPIO
-    if (lighting) lm.addComponent("lighting", *lighting, 2);
-    if (door_lock) lm.addComponent("door_lock", *door_lock, 2);
+    if (lighting) lifecycleManager.addComponent("lighting", *lighting, 2);
+    if (door_lock) lifecycleManager.addComponent("door_lock", *door_lock, 2);
 #endif
-    lm.addComponent("vehicle_mode", vehicle_mode, 2);
+    lifecycleManager.addComponent("vehicle_mode", vehicle_mode, 2);
 #ifdef CONFIG_CAN
-    lm.addComponent("can_gateway", can_gateway, 3);
-    lm.addComponent("docan", docan_transport, 3);
+    lifecycleManager.addComponent("can_gateway", can_gateway, 3);
+    lifecycleManager.addComponent("docan", docan_transport, 3);
 #endif
-    lm.addComponent("diagnostics", diagnostics, 3);
-    lm.addComponent("doip", doip_transport, 3);
+    lifecycleManager.addComponent("diagnostics", diagnostics, 3);
+    lifecycleManager.addComponent("doip", doip_transport, 3);
 
+    LOG_INF("CP11: lifecycle components added");
 #ifdef CONFIG_GPIO
     if (!gpio_ok) {
         static body::LockState sw_state = body::LockState::Unlocked;
@@ -187,8 +253,11 @@ int main(void)
 #endif
 
     LOG_INF("Transitioning to run level 3...");
-    lm.transitionToLevel(3);
+    lifecycleManager.transitionToLevel(MaxNumLevels);
     LOG_INF("Body ECU ready - all systems running");
+
+    runtimeMonitor.start();
+    AsyncAdapter::run();
 
     k_sleep(K_FOREVER);
     return 0;

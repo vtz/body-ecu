@@ -4,12 +4,12 @@
 #include <vector>
 
 #include "diagnostics/ITransportLayer.h"
-#include "lifecycle/ILifecycleComponent.h"
+#include <lifecycle/SimpleLifecycleComponent.h>
 #include "ports/ICanBus.h"
 
 namespace body_ecu::adapters {
 
-class DoCanTransport : public lifecycle::ILifecycleComponent
+class DoCanTransport : public lifecycle::SimpleLifecycleComponent
                      , public platform::ITransportLayer {
 public:
     static constexpr uint32_t kDiagRxCanId = 0x600;

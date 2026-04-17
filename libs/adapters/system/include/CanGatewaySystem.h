@@ -2,12 +2,12 @@
 
 #include "SomeIpSystem.h"
 #include "can_gateway/CanGateway.h"
-#include "lifecycle/ILifecycleComponent.h"
+#include <lifecycle/SimpleLifecycleComponent.h>
 #include "ports/ICanBus.h"
 
 namespace body_ecu::adapters {
 
-class CanGatewaySystem : public lifecycle::ILifecycleComponent {
+class CanGatewaySystem : public lifecycle::SimpleLifecycleComponent {
 public:
     CanGatewaySystem(ports::ICanBus& can, SomeIpSystem& someip);
 

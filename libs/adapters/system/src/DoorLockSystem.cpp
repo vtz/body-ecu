@@ -11,15 +11,16 @@ DoorLockSystem::DoorLockSystem(ports::IGpioPort& gpio,
 
 void DoorLockSystem::init() {
     controller_.init();
+    transitionDone();
 }
 
 void DoorLockSystem::run() {
-    // Controller is event-driven via SOME/IP method handlers
-    // and button interrupt callback.
+    transitionDone();
 }
 
 void DoorLockSystem::shutdown() {
     controller_.unlock();
+    transitionDone();
 }
 
 }  // namespace body_ecu::adapters

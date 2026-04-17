@@ -1,0 +1,2 @@
+add_library(freeRtosCoreConfiguration INTERFACE)
+target_include_directories(freeRtosCoreConfiguration INTERFACE include)

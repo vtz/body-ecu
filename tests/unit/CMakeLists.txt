@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.14)
 set(CMAKE_POLICY_VERSION_MINIMUM 3.5 CACHE STRING "")
-project(body_ecu_tests CXX)
+project(body_ecu_tests CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -32,12 +32,88 @@ enable_testing()
 include(GoogleTest)
 
 set(LIBS_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../libs)
+set(OPENBSW_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../openbsw CACHE PATH "OpenBSW root")
+
+# --- OpenBSW lifecycle (directly, without full Filelists.cmake) ---
+# Minimal async mock for unit tests
+add_library(asyncImpl INTERFACE)
+target_include_directories(asyncImpl INTERFACE
+    ${OPENBSW_DIR}/libs/bsw/asyncImpl/include)
+
+add_library(platform INTERFACE)
+target_include_directories(platform INTERFACE
+    ${OPENBSW_DIR}/libs/bsw/platform/include)
+
+add_library(timer INTERFACE)
+target_include_directories(timer INTERFACE
+    ${OPENBSW_DIR}/libs/bsw/timer/include)
+
+add_library(common INTERFACE)
+target_include_directories(common INTERFACE
+    ${OPENBSW_DIR}/libs/bsw/common/include)
+
+# ETL
+add_library(etl INTERFACE)
+target_include_directories(etl INTERFACE
+    ${OPENBSW_DIR}/libs/3rdparty/etl/include)
+
+# Util (needed by lifecycle logger)
+add_library(util STATIC
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/logger/Logger.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/logger/ComponentInfo.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/logger/LevelInfo.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/format/PrintfFormatter.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/format/PrintfFormatScanner.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/format/PrintfArgumentReader.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/format/StringWriter.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/format/SharedStringWriter.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/format/AttributedString.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/format/Vt100AttributedStringFormatter.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/stream/NullOutputStream.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/stream/SharedOutputStream.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/stream/TaggedOutputStream.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/string/ConstString.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/command/CommandContext.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/command/GroupCommand.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/command/SimpleCommand.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/command/HelpCommand.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/command/ParentCommand.cpp
+    ${OPENBSW_DIR}/libs/bsw/util/src/util/estd/assert.cpp
+)
+target_include_directories(util PUBLIC
+    ${OPENBSW_DIR}/libs/bsw/util/include)
+target_link_libraries(util PUBLIC platform etl)
+
+# BSP interrupts (header-only for tests, with mock)
+add_library(bspInterrupts INTERFACE)
+target_include_directories(bspInterrupts INTERFACE
+    ${OPENBSW_DIR}/libs/bsp/bspInterrupts/include
+    ${OPENBSW_DIR}/libs/bsp/bspInterrupts/mock/include)
+
+# Mock async for tests (no real scheduler)
+add_library(async INTERFACE)
+target_include_directories(async INTERFACE
+    ${OPENBSW_DIR}/libs/bsw/asyncFreeRtos/test/include
+    ${OPENBSW_DIR}/libs/bsw/asyncFreeRtos/include
+    ${OPENBSW_DIR}/libs/bsw/async/include)
+target_link_libraries(async INTERFACE asyncImpl timer bspInterrupts)
+
+# OpenBSW lifecycle
+add_library(lifecycle STATIC
+    ${OPENBSW_DIR}/libs/bsw/lifecycle/src/lifecycle/AsyncLifecycleComponent.cpp
+    ${OPENBSW_DIR}/libs/bsw/lifecycle/src/lifecycle/LifecycleComponent.cpp
+    ${OPENBSW_DIR}/libs/bsw/lifecycle/src/lifecycle/LifecycleLogger.cpp
+    ${OPENBSW_DIR}/libs/bsw/lifecycle/src/lifecycle/LifecycleManager.cpp
+    ${OPENBSW_DIR}/libs/bsw/lifecycle/src/lifecycle/LifecycleManagerForwarder.cpp
+    ${OPENBSW_DIR}/libs/bsw/lifecycle/src/lifecycle/SimpleLifecycleComponent.cpp
+    ${OPENBSW_DIR}/libs/bsw/lifecycle/src/lifecycle/SingleContextLifecycleComponent.cpp
+)
+target_include_directories(lifecycle PUBLIC
+    ${OPENBSW_DIR}/libs/bsw/lifecycle/include)
+target_link_libraries(lifecycle PUBLIC async util etl)
 
 # Port interfaces + mocks
 add_subdirectory(${LIBS_ROOT}/platform/ports ports)
-
-# Lifecycle manager
-add_subdirectory(${LIBS_ROOT}/platform/lifecycle lifecycle)
 
 # Adapters: system lifecycle wrappers + transports
 add_library(adapters_system STATIC

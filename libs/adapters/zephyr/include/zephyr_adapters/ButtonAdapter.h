@@ -10,10 +10,10 @@
 namespace body_ecu::adapters {
 
 /// Zephyr GPIO interrupt adapter implementing IButtonInput.
-/// Configures a GPIO pin with interrupt on rising edge for button press.
+/// Uses the full gpio_dt_spec to correctly handle active-high/low polarity.
 class ButtonAdapter : public ports::IButtonInput {
 public:
-    ButtonAdapter(const struct device* port, gpio_pin_t pin);
+    explicit ButtonAdapter(const struct gpio_dt_spec& spec);
 
     bool configure();
 
@@ -22,10 +22,11 @@ public:
 private:
     static void isrHandler(const struct device* dev,
                            struct gpio_callback* cb, uint32_t pins);
+    static void workHandler(struct k_work* work);
 
-    const struct device* port_;
-    gpio_pin_t pin_;
+    struct gpio_dt_spec spec_;
     struct gpio_callback cb_data_;
+    struct k_work work_;
     ports::ButtonCallback callback_;
 };
 

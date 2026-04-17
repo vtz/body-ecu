@@ -20,4 +20,5 @@ zephyr_library_link_libraries(
 if(CONFIG_SOMEIP)
     zephyr_library_link_libraries(someip_core)
     zephyr_library_compile_definitions(HAS_OPENSOMEIP)
+    target_compile_definitions(app PRIVATE HAS_OPENSOMEIP)
 endif()

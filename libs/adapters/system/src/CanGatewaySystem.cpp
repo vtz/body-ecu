@@ -10,15 +10,17 @@ void CanGatewaySystem::addMapping(const platform::ServiceMapping& mapping) {
 }
 
 void CanGatewaySystem::init() {
-    // Mappings should be loaded from config before init.
+    transitionDone();
 }
 
 void CanGatewaySystem::run() {
     gateway_.start();
+    transitionDone();
 }
 
 void CanGatewaySystem::shutdown() {
     gateway_.stop();
+    transitionDone();
 }
 
 }  // namespace body_ecu::adapters

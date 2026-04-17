@@ -8,14 +8,16 @@ VehicleModeSystem::VehicleModeSystem(SomeIpSystem& someip,
 
 void VehicleModeSystem::init() {
     manager_.init();
+    transitionDone();
 }
 
 void VehicleModeSystem::run() {
-    // Manager is event-driven via SOME/IP field handlers.
+    transitionDone();
 }
 
 void VehicleModeSystem::shutdown() {
     manager_.setMode(ports::VehicleMode::Off);
+    transitionDone();
 }
 
 }  // namespace body_ecu::adapters

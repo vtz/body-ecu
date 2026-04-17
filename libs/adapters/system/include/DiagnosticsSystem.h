@@ -3,12 +3,12 @@
 #include "diagnostics/DtcStore.h"
 #include "diagnostics/ITransportLayer.h"
 #include "diagnostics/UdsServiceHandler.h"
-#include "lifecycle/ILifecycleComponent.h"
+#include <lifecycle/SimpleLifecycleComponent.h>
 #include "ports/IDiagDataProvider.h"
 
 namespace body_ecu::adapters {
 
-class DiagnosticsSystem : public lifecycle::ILifecycleComponent {
+class DiagnosticsSystem : public lifecycle::SimpleLifecycleComponent {
 public:
     DiagnosticsSystem();
 

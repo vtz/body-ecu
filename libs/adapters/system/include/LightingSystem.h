@@ -1,13 +1,13 @@
 #pragma once
 
 #include "SomeIpSystem.h"
-#include "lifecycle/ILifecycleComponent.h"
+#include <lifecycle/SimpleLifecycleComponent.h>
 #include "lighting/LightingController.h"
 #include "ports/IGpioPort.h"
 
 namespace body_ecu::adapters {
 
-class LightingSystem : public lifecycle::ILifecycleComponent {
+class LightingSystem : public lifecycle::SimpleLifecycleComponent {
 public:
     LightingSystem(ports::IGpioPort& gpio, SomeIpSystem& someip,
                    const body::LightingConfig& config = {});

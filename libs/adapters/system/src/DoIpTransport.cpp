@@ -13,15 +13,15 @@ void DoIpTransport::setRequestHandler(platform::DiagRequestHandler handler) {
 }
 
 void DoIpTransport::init() {
-    // DoIP TCP server not yet implemented on Zephyr.
-    // Requires CONFIG_NET_SOCKETS + Zephyr threading.
     running_.store(true);
     std::printf("[DoIP] Stub on Zephyr (TCP server not available)\n");
+    transitionDone();
 }
 
 void DoIpTransport::shutdown() {
     running_.store(false);
     handler_ = nullptr;
+    transitionDone();
 }
 
 void DoIpTransport::sendResponse(const platform::DiagResponse&) {}
@@ -85,6 +85,7 @@ void DoIpTransport::init() {
 
     std::printf("[DoIP] Listening on 0.0.0.0:%u (entity 0x%04X)\n",
                 port_, kLogicalAddress);
+    transitionDone();
 }
 
 void DoIpTransport::shutdown() {
@@ -102,6 +103,7 @@ void DoIpTransport::shutdown() {
 
     handler_ = nullptr;
     std::printf("[DoIP] Shut down\n");
+    transitionDone();
 }
 
 void DoIpTransport::acceptLoop() {

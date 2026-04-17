@@ -1,12 +1,12 @@
 #pragma once
 
 #include "SomeIpSystem.h"
-#include "lifecycle/ILifecycleComponent.h"
+#include <lifecycle/SimpleLifecycleComponent.h>
 #include "vehicle_mode/VehicleModeManager.h"
 
 namespace body_ecu::adapters {
 
-class VehicleModeSystem : public lifecycle::ILifecycleComponent {
+class VehicleModeSystem : public lifecycle::SimpleLifecycleComponent {
 public:
     VehicleModeSystem(SomeIpSystem& someip,
                       const body::VehicleModeConfig& config = {});

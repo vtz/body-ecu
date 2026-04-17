@@ -8,18 +8,18 @@ LightingSystem::LightingSystem(ports::IGpioPort& gpio, SomeIpSystem& someip,
 
 void LightingSystem::init() {
     controller_.init();
+    transitionDone();
 }
 
 void LightingSystem::run() {
-    // Controller is event-driven via SOME/IP method handlers;
-    // no periodic work needed.
+    transitionDone();
 }
 
 void LightingSystem::shutdown() {
-    // Turn off all lights on shutdown
     for (size_t i = 0; i < body::kLightCount; ++i) {
         controller_.setLightState(static_cast<body::LightId>(i), false);
     }
+    transitionDone();
 }
 
 }  // namespace body_ecu::adapters
