@@ -46,6 +46,7 @@ add_subdirectory(${LIBS_ROOT}/platform/ports ${CMAKE_CURRENT_BINARY_DIR}/ports)
 add_subdirectory(${LIBS_ROOT}/body/lighting ${CMAKE_CURRENT_BINARY_DIR}/lighting)
 add_subdirectory(${LIBS_ROOT}/body/door-lock ${CMAKE_CURRENT_BINARY_DIR}/door-lock)
 add_subdirectory(${LIBS_ROOT}/body/vehicle-mode ${CMAKE_CURRENT_BINARY_DIR}/vehicle-mode)
+add_subdirectory(${LIBS_ROOT}/body/speed-simulator ${CMAKE_CURRENT_BINARY_DIR}/speed-simulator)
 
 # Platform modules
 add_subdirectory(${LIBS_ROOT}/platform/can-gateway ${CMAKE_CURRENT_BINARY_DIR}/can-gateway)
@@ -66,6 +67,7 @@ target_link_libraries(app PRIVATE
     lighting
     door_lock
     vehicle_mode
+    speed_simulator
     can_gateway
     diagnostics
     adapters_zephyr

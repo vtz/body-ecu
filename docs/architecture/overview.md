@@ -29,7 +29,7 @@ The software follows a hexagonal (ports & adapters) architecture:
 | Layer | Path | Purpose |
 |-------|------|---------|
 | **Port Interfaces** | `libs/platform/ports/` | Abstract C++ interfaces with zero dependencies |
-| **Domain Logic** | `libs/body/` | Portable business logic (lighting, door-lock, vehicle-mode) |
+| **Domain Logic** | `libs/body/` | Portable business logic (lighting, door-lock, vehicle-mode, speed-simulator) |
 | **ECU-Generic** | `libs/platform/` | Reusable modules (config-loader, can-gateway, diagnostics) |
 | **Adapters** | `libs/adapters/` | Platform-specific implementations (Zephyr, OpenBSW) |
 | **Application** | `app/` | Zephyr entry point and wiring |
@@ -58,6 +58,11 @@ Domain modules never depend on adapters, Zephyr, or OpenBSW.
 - **Vehicle Mode:** SOME/IP field with getter/setter/notifier
   (Off/Accessory/Run/Crank). Cross-service mode notifications via
   IModeObserver.
+- **Speed Simulator:** Reads a 10k potentiometer via IAdcInput (ADC
+  on PA3/A0), converts to vehicle speed using a simple physics model
+  (acceleration/drag). Broadcasts speed every 100ms via SOME/IP
+  event (service 0x1003) and publishes `Vehicle.Speed` to ISignalBus.
+  On POSIX, reads throttle from `/tmp/body_ecu_throttle`.
 
 ### Tier 3 -- Architectural Showcases
 

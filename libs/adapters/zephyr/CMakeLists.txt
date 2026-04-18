@@ -9,6 +9,8 @@ zephyr_library_sources(
     src/CanAdapter.cpp
     src/ButtonAdapter.cpp
     src/LocalSignalBus.cpp
+    src/ZephyrTimerService.cpp
+    src/AdcAdapter.cpp
 )
 zephyr_library_include_directories(include)
 zephyr_library_link_libraries(ports)

@@ -62,6 +62,14 @@ int main(int argc, char* argv[])
     lock_cmd.someip_method_or_event_id = 0x0001;
     bridge.addMapping(lock_cmd);
 
+    adapters::BridgeMapping speed_event;
+    speed_event.signal_path = "Vehicle.Speed";
+    speed_event.direction = adapters::BridgeDirection::EventToSignal;
+    speed_event.someip_service_id = 0x1003;
+    speed_event.someip_method_or_event_id = 0x8001;
+    speed_event.someip_eventgroup_id = 0x0001;
+    bridge.addMapping(speed_event);
+
     platform::CloudGatewayConfig gw_config;
     platform::CloudGatewayClient gateway(cloud_transport, signal_bus,
                                          gw_config);

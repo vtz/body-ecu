@@ -80,6 +80,7 @@ vehicle mode) over SOME/IP and UDS diagnostics. It lacks:
 | LOCKING_SERVICE        | MCU    | Safety (ASIL-B)    | SOME/IP, Signal Bus, GPIO     |
 | LIGHTING               | MCU    | Safety             | SOME/IP, Signal Bus, GPIO     |
 | VEHICLE_MODE           | MCU    | Safety             | SOME/IP, Signal Bus           |
+| SPEED_SIMULATOR        | MCU    | QM                 | SOME/IP, Signal Bus, ADC      |
 | CAN_GATEWAY            | MCU    | --                 | CAN-FD, SOME/IP               |
 | DIAGNOSTICS            | MCU    | --                 | DoIP, DoCAN (UDS)             |
 | DATA_BROKER            | MPU    | QM                 | gRPC (Kuksa val.proto)        |
@@ -282,7 +283,7 @@ Custom VSS overlay signals used by body services:
 | `Vehicle.Command.Door.Lock`                      | actuator | boolean  | CLOUD_GATEWAY_CLIENT | LOCKING_SERVICE                |
 | `Vehicle.Command.Door.Response`                  | sensor   | uint8    | LOCKING_SERVICE      | CLOUD_GATEWAY_CLIENT           |
 | `Vehicle.Cabin.Door.Row1.DriverSide.IsOpen`      | sensor   | boolean  | (hardware sensor)    | LOCKING_SERVICE                |
-| `Vehicle.Speed`                                  | sensor   | float    | (powertrain ECU)     | LOCKING_SERVICE                |
+| `Vehicle.Speed`                                  | sensor   | float    | SPEED_SIMULATOR      | LOCKING_SERVICE                |
 | `Vehicle.Parking.SessionActive`                  | sensor   | boolean  | PARKING_OPERATOR_ADAPTOR | (outside scope)            |
 
 The overlay is defined in `config/vss_overlay.yaml` and loaded by the
@@ -352,6 +353,11 @@ mappings:
   - signal: "Vehicle.Command.Door.Response"
     can_id: 0x402
     dlc: 1
+    byte_offset: 0
+
+  - signal: "Vehicle.Speed"
+    can_id: 0x403
+    dlc: 4
     byte_offset: 0
 ```
 

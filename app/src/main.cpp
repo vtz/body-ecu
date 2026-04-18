@@ -12,6 +12,10 @@ LOG_MODULE_REGISTER(body_ecu, LOG_LEVEL_INF);
 #include <zephyr/drivers/can.h>
 #endif
 
+#ifdef CONFIG_ADC
+#include <zephyr/drivers/adc.h>
+#endif
+
 #include <async/AsyncBinding.h>
 #include <lifecycle/LifecycleManager.h>
 #include <bsp/timer/SystemTimer.h>
@@ -25,6 +29,7 @@ LOG_MODULE_REGISTER(body_ecu, LOG_LEVEL_INF);
 #include "VehicleInfoProvider.h"
 #include "LightingSystem.h"
 #include "SomeIpSystem.h"
+#include "SpeedSimulatorSystem.h"
 #include "VehicleModeSystem.h"
 
 #ifdef CONFIG_GPIO
@@ -33,7 +38,24 @@ LOG_MODULE_REGISTER(body_ecu, LOG_LEVEL_INF);
 #include "zephyr_adapters/GpioAdapter.h"
 #endif
 
+#ifdef CONFIG_ADC
+#include "zephyr_adapters/AdcAdapter.h"
+#endif
+
 #include "zephyr_adapters/LocalSignalBus.h"
+#include "zephyr_adapters/ZephyrTimerService.h"
+
+namespace {
+
+/// STM32H753 DBGMCU IDCODE register.  Real silicon reports DEV_ID = 0x450;
+/// Renode typically does not model this peripheral and returns 0.
+bool is_real_hardware()
+{
+    volatile uint32_t idcode = *reinterpret_cast<volatile uint32_t*>(0x5C001000);
+    return (idcode & 0xFFF) == 0x450;
+}
+
+}  // namespace
 
 using namespace body_ecu;
 
@@ -58,7 +80,7 @@ static LifecycleManager lifecycleManager{
     TASK_SYSADMIN,
     ::lifecycle::LifecycleManager::GetTimestampType::create<&getSystemTimeUs32Bit>()};
 
-K_THREAD_STACK_DEFINE(sysadminStack, 1024);
+K_THREAD_STACK_DEFINE(sysadminStack, 2 * 1024);
 using SysadminTask = AsyncAdapter::Task<TASK_SYSADMIN, K_THREAD_STACK_SIZEOF(sysadminStack)>;
 SysadminTask sysadminTask{"sysadmin", sysadminStack};
 
@@ -66,15 +88,15 @@ K_THREAD_STACK_DEFINE(bodyStack, 4 * 1024);
 using BodyTask = AsyncAdapter::Task<TASK_BODY, K_THREAD_STACK_SIZEOF(bodyStack)>;
 BodyTask bodyTask{"body", bodyStack};
 
-K_THREAD_STACK_DEFINE(someipStack, 2 * 1024);
+K_THREAD_STACK_DEFINE(someipStack, 8 * 1024);
 using SomeIpTask = AsyncAdapter::Task<TASK_SOMEIP, K_THREAD_STACK_SIZEOF(someipStack)>;
 SomeIpTask someipTask{"someip", someipStack};
 
-K_THREAD_STACK_DEFINE(diagStack, 2 * 1024);
+K_THREAD_STACK_DEFINE(diagStack, 4 * 1024);
 using DiagTask = AsyncAdapter::Task<TASK_DIAG, K_THREAD_STACK_SIZEOF(diagStack)>;
 DiagTask diagTask{"diag", diagStack};
 
-K_THREAD_STACK_DEFINE(backgroundStack, 1024);
+K_THREAD_STACK_DEFINE(backgroundStack, 2 * 1024);
 using BackgroundTask = AsyncAdapter::Task<TASK_BACKGROUND, K_THREAD_STACK_SIZEOF(backgroundStack)>;
 BackgroundTask backgroundTask{"background", backgroundStack};
 
@@ -94,7 +116,13 @@ int main(void)
 
     AsyncAdapter::init();
 
-    adapters::SomeIpConfig someip_cfg{.host = "0.0.0.0", .port = 30490};
+    bool real_hw = is_real_hardware();
+    LOG_INF("Hardware detection: %s (DBGMCU IDCODE=0x%08x)",
+            real_hw ? "real silicon" : "emulated (Renode)",
+            *reinterpret_cast<volatile uint32_t*>(0x5C001000));
+
+    adapters::SomeIpConfig someip_cfg{
+        .host = "0.0.0.0", .port = 30490, .enable_sd = real_hw};
     static adapters::SomeIpSystem someip_system(someip_cfg);
 
 #ifdef CONFIG_GPIO
@@ -142,6 +170,19 @@ int main(void)
                           door_cfg, &signal_bus);
     }
 #endif
+    // --- Speed Simulator (ADC potentiometer) ---
+    static adapters::ZephyrTimerService timer_service;
+#ifdef CONFIG_ADC
+    const struct device* adc_dev = DEVICE_DT_GET(DT_NODELABEL(adc1));
+    static adapters::AdcAdapter adc_adapter(adc_dev);
+    bool adc_ok = adc_adapter.configure(15, 12);
+    std::optional<adapters::SpeedSimulatorSystem> speed_sim;
+    if (real_hw && adc_ok) {
+        speed_sim.emplace(adc_adapter, someip_system, timer_service,
+                          body::SpeedSimulatorConfig{}, &signal_bus);
+    }
+#endif
+
     LOG_INF("CP4: creating VehicleModeSystem");
     static adapters::VehicleModeSystem vehicle_mode(someip_system);
     LOG_INF("CP5: VehicleModeSystem done");
@@ -202,6 +243,9 @@ int main(void)
     if (door_lock) lifecycleManager.addComponent("door_lock", *door_lock, 2);
 #endif
     lifecycleManager.addComponent("vehicle_mode", vehicle_mode, 2);
+#ifdef CONFIG_ADC
+    if (speed_sim) lifecycleManager.addComponent("speed_sim", *speed_sim, 2);
+#endif
 #ifdef CONFIG_CAN
     lifecycleManager.addComponent("can_gateway", can_gateway, 3);
     lifecycleManager.addComponent("docan", docan_transport, 3);
@@ -249,6 +293,23 @@ int main(void)
         someip_system.registerEvent(cfg.service_id,
             cfg.lock_state_changed_event, cfg.eventgroup_id);
         LOG_INF("Registered software-only door-lock SOME/IP handlers");
+    }
+#endif
+
+#ifdef CONFIG_ADC
+    if (!speed_sim) {
+        body::SpeedSimulatorConfig scfg;
+        someip_system.registerMethod(scfg.service_id, scfg.get_speed_method,
+            [](const ports::SomeIpMessage& req) {
+                ports::SomeIpMessage resp = req;
+                resp.message_type = 0x80;
+                resp.return_code = 0x00;
+                resp.payload = {0, 0, 0, 0};
+                return resp;
+            });
+        someip_system.registerEvent(scfg.service_id,
+            scfg.speed_changed_event, scfg.eventgroup_id);
+        LOG_INF("Registered software-only speed SOME/IP handlers (emulation)");
     }
 #endif
 

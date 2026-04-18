@@ -4,6 +4,7 @@
 #include "DoCanTransport.h"
 #include "DoIpTransport.h"
 #include "DoorLockSystem.h"
+#include "SpeedSimulatorSystem.h"
 #include "VehicleInfoProvider.h"
 #include "LightingSystem.h"
 #include "SomeIpSystem.h"
@@ -11,8 +12,10 @@
 
 #include "linux_adapters/ConsoleGpioAdapter.h"
 #include "linux_adapters/InProcessSignalBus.h"
+#include "linux_adapters/SimulatedAdcAdapter.h"
 #include "linux_adapters/SocketCanAdapter.h"
 #include "linux_adapters/StdinButtonAdapter.h"
+#include "linux_adapters/ThreadTimerService.h"
 
 #include <async/AsyncBinding.h>
 #include <lifecycle/LifecycleManager.h>
@@ -68,6 +71,13 @@ void app_main()
                                               someip_system,
                                               body::DoorLockConfig{}, &signal_bus);
     static adapters::VehicleModeSystem vehicle_mode(someip_system);
+
+    static adapters::SimulatedAdcAdapter adc_adapter;
+    static adapters::ThreadTimerService timer_service;
+    static adapters::SpeedSimulatorSystem speed_sim(
+        adc_adapter, someip_system, timer_service,
+        body::SpeedSimulatorConfig{}, &signal_bus);
+
     static adapters::CanGatewaySystem can_gateway(can_adapter, someip_system);
 
     platform::ServiceMapping light_gw;
@@ -109,6 +119,7 @@ void app_main()
     lifecycleManager.addComponent("lighting",     lighting,         2);
     lifecycleManager.addComponent("door_lock",    door_lock,        2);
     lifecycleManager.addComponent("vehicle_mode", vehicle_mode,     2);
+    lifecycleManager.addComponent("speed_sim",    speed_sim,        2);
     lifecycleManager.addComponent("can_gateway",  can_gateway,      3);
     lifecycleManager.addComponent("diagnostics",  diagnostics,      3);
     lifecycleManager.addComponent("doip",         doip_transport,   3);
