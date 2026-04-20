@@ -34,8 +34,9 @@ void SpeedSimulator::init() {
     timer_id_ = timer_.startPeriodic(config_.update_interval_ms,
                                      [this]() { onTimerTick(); });
 
-    printk("[speed_sim] Initialized (interval=%ums, max=%.0f km/h)\n",
-           config_.update_interval_ms, config_.max_speed_kmh);
+    printk("[speed_sim] Initialized (interval=%ums, max=%d km/h)\n",
+           config_.update_interval_ms,
+           static_cast<int>(config_.max_speed_kmh));
 }
 
 void SpeedSimulator::onTimerTick() {

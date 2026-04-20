@@ -1,0 +1,20 @@
+apiVersion: jumpstarter.dev/v1alpha1
+kind: ExporterConfig
+metadata:
+  name: nucleo-board 
+  namespace: default
+endpoint: grpc.jumpstarter.example.com:443
+token: "<token>"
+export:
+  flasher:
+    type: jumpstarter_driver_probe_rs.driver.ProbeRs
+    config:
+      probe_rs_path: "/opt/homebrew/bin/probe-rs"
+      chip: "STM32H755ZI"
+      protocol: "swd"
+      connect_under_reset: true
+  console:
+    type: jumpstarter_driver_pyserial.driver.PySerial
+    config:
+      url: "/dev/cu.usbmodem1203"
+      baudrate: 115200 

@@ -1,6 +1,10 @@
 #pragma once
 
+#include <memory>
+#include <mutex>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "ports/ICloudTransport.h"
 
@@ -11,10 +15,16 @@ struct NatsConfig {
 };
 
 /// ICloudTransport implementation backed by NATS via nats.c client.
-/// Requires libnats at link time.
+///
+/// When built with HAS_NATS, uses real nats.c calls.
+/// Otherwise falls back to printf stubs for development builds.
 class NatsCloudTransportAdapter : public ports::ICloudTransport {
 public:
     explicit NatsCloudTransportAdapter(const NatsConfig& config = {});
+    ~NatsCloudTransportAdapter();
+
+    NatsCloudTransportAdapter(const NatsCloudTransportAdapter&) = delete;
+    NatsCloudTransportAdapter& operator=(const NatsCloudTransportAdapter&) = delete;
 
     bool connect() override;
     void disconnect() override;
@@ -23,11 +33,19 @@ public:
     void subscribe(const std::string& subject,
                    ports::CloudMessageCallback callback) override;
 
+    /// Internal dispatch for the nats.c C-style callback. Not part of public API.
+    void dispatchMessage(const std::string& subject,
+                         const std::vector<uint8_t>& data);
+
 private:
     NatsConfig config_;
     bool connected_{false};
-    // natsConnection* and natsSubscription* would be members here once
-    // nats.c is wired into the build.
+
+    std::mutex mutex_;
+    std::unordered_map<std::string, ports::CloudMessageCallback> subscribers_;
+
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
 };
 
 }  // namespace body_ecu::adapters

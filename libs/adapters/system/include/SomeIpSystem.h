@@ -56,6 +56,7 @@ struct SomeIpConfig {
     std::string host{"0.0.0.0"};
     uint16_t port{30490};
     SomeIpRole role{SomeIpRole::Server};
+    bool enable_sd{true};
     std::string sd_multicast{"239.255.255.251"};
     uint16_t sd_port{30491};
     uint32_t sd_offer_interval_ms{5000};

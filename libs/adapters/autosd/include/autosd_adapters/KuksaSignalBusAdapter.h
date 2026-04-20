@@ -1,6 +1,10 @@
 #pragma once
 
+#include <memory>
+#include <mutex>
 #include <string>
+#include <unordered_map>
+#include <vector>
 
 #include "ports/ISignalBus.h"
 
@@ -12,10 +16,16 @@ struct KuksaConfig {
 };
 
 /// ISignalBus implementation backed by Eclipse Kuksa Databroker via gRPC.
-/// Requires grpc++ and kuksa val.proto stubs at link time.
+///
+/// When built with HAS_KUKSA_GRPC, uses real gRPC calls to the databroker.
+/// Otherwise falls back to printf stubs for development builds.
 class KuksaSignalBusAdapter : public ports::ISignalBus {
 public:
     explicit KuksaSignalBusAdapter(const KuksaConfig& config = {});
+    ~KuksaSignalBusAdapter();
+
+    KuksaSignalBusAdapter(const KuksaSignalBusAdapter&) = delete;
+    KuksaSignalBusAdapter& operator=(const KuksaSignalBusAdapter&) = delete;
 
     void connect();
     void disconnect();
@@ -30,8 +40,12 @@ public:
 private:
     KuksaConfig config_;
     bool connected_{false};
-    // gRPC channel and stubs would be members here once
-    // kuksa-databroker-proto is wired into the build.
+
+    mutable std::mutex mutex_;
+    std::unordered_map<std::string, ports::SignalCallback> subscribers_;
+
+    struct Impl;
+    std::unique_ptr<Impl> impl_;
 };
 
 }  // namespace body_ecu::adapters

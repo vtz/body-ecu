@@ -9,6 +9,7 @@
 #include "autosd_adapters/KuksaSignalBusAdapter.h"
 #include "autosd_adapters/NatsCloudTransportAdapter.h"
 #include "autosd_adapters/SomeIpKuksaBridge.h"
+#include "autosd_adapters/SystemdLifecycleAdapter.h"
 #include "cloud_gateway/CloudGatewayClient.h"
 
 using namespace body_ecu;
@@ -21,6 +22,7 @@ static void signalHandler(int /*sig*/) {
 
 int main(int argc, char* argv[])
 {
+    std::setbuf(stdout, nullptr);
     std::signal(SIGINT, signalHandler);
     std::signal(SIGTERM, signalHandler);
 
@@ -71,12 +73,14 @@ int main(int argc, char* argv[])
     bridge.init();
     gateway.init();
 
+    adapters::SystemdLifecycleAdapter::notifyReady();
     std::printf("\nBody ECU AutoSD MPU ready. Press Ctrl+C to shut down.\n\n");
 
     while (g_running) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
+    adapters::SystemdLifecycleAdapter::notifyStopping();
     std::printf("\nShutting down...\n");
     gateway.shutdown();
     bridge.shutdown();
