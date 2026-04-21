@@ -13,6 +13,7 @@ ports::TimerId ZephyrTimerService::startPeriodic(
             slots_[i].active = true;
             slots_[i].periodic = true;
             slots_[i].callback = std::move(callback);
+            k_work_init(&slots_[i].work, workHandler);
             k_timer_init(&slots_[i].timer, expiryHandler, nullptr);
             slots_[i].timer.user_data = &slots_[i];
             k_timer_start(&slots_[i].timer, K_MSEC(interval_ms),
@@ -31,6 +32,7 @@ ports::TimerId ZephyrTimerService::startOneShot(
             slots_[i].active = true;
             slots_[i].periodic = false;
             slots_[i].callback = std::move(callback);
+            k_work_init(&slots_[i].work, workHandler);
             k_timer_init(&slots_[i].timer, expiryHandler, nullptr);
             slots_[i].timer.user_data = &slots_[i];
             k_timer_start(&slots_[i].timer, K_MSEC(delay_ms), K_NO_WAIT);
@@ -52,6 +54,13 @@ void ZephyrTimerService::cancel(ports::TimerId id) {
 
 void ZephyrTimerService::expiryHandler(struct k_timer* timer) {
     auto* slot = static_cast<TimerSlot*>(timer->user_data);
+    if (slot && slot->active) {
+        k_work_submit(&slot->work);
+    }
+}
+
+void ZephyrTimerService::workHandler(struct k_work* work) {
+    auto* slot = CONTAINER_OF(work, TimerSlot, work);
     if (slot && slot->callback) {
         slot->callback();
         if (!slot->periodic) {

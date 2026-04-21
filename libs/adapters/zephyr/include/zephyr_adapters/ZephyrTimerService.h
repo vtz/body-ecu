@@ -24,12 +24,14 @@ public:
 private:
     struct TimerSlot {
         struct k_timer timer;
+        struct k_work work;
         ports::TimerCallback callback;
         bool active{false};
         bool periodic{false};
     };
 
     static void expiryHandler(struct k_timer* timer);
+    static void workHandler(struct k_work* work);
 
     std::array<TimerSlot, kMaxTimers> slots_{};
     ports::TimerId next_id_{0};

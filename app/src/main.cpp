@@ -178,8 +178,10 @@ int main(void)
     bool adc_ok = adc_adapter.configure(15, 12);
     std::optional<adapters::SpeedSimulatorSystem> speed_sim;
     if (real_hw && adc_ok) {
+        body::SpeedSimulatorConfig speed_cfg;
+        speed_cfg.adc_channel = 15;
         speed_sim.emplace(adc_adapter, someip_system, timer_service,
-                          body::SpeedSimulatorConfig{}, &signal_bus);
+                          speed_cfg, &signal_bus);
     }
 #endif
 

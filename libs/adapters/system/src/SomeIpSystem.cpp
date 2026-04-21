@@ -174,9 +174,16 @@ void SomeIpSystem::sendEvent(uint16_t service_id, uint16_t event_id,
     if (transport_ && running_) {
         auto someip_msg = toSomeIp(msg);
         PlatformLockGuard lock(mutex_);
+        std::printf("[SOME/IP] sendEvent svc=0x%04X evt=0x%04X clients=%zu\n",
+                    service_id, event_id,
+                    known_clients_.size());
         for (const auto& client : known_clients_) {
             (void)transport_->send_message(someip_msg, client);
         }
+    } else {
+        std::printf("[SOME/IP] sendEvent SKIPPED transport=%p running=%d\n",
+                    static_cast<void*>(transport_.get()),
+                    running_ ? 1 : 0);
     }
 #endif
 }

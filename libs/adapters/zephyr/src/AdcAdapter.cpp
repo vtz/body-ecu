@@ -20,7 +20,7 @@ bool AdcAdapter::configure(uint8_t channel, uint8_t resolution) {
     channel_cfg_.gain = ADC_GAIN_1;
     channel_cfg_.reference = ADC_REF_INTERNAL;
     channel_cfg_.acquisition_time =
-        ADC_ACQ_TIME(ADC_ACQ_TIME_TICKS, 810);
+        ADC_ACQ_TIME(ADC_ACQ_TIME_TICKS, 811);
     channel_cfg_.channel_id = channel;
 
     int ret = adc_channel_setup(adc_dev_, &channel_cfg_);
@@ -52,6 +52,7 @@ int32_t AdcAdapter::read(uint8_t channel) {
 
     int ret = adc_read(adc_dev_, &sequence);
     if (ret < 0) {
+        printk("[adc] read failed: %d\n", ret);
         return 0;
     }
 

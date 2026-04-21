@@ -47,6 +47,9 @@ private:
     ports::ISignalBus* signal_bus_;
     ports::TimerId timer_id_{0};
     float current_speed_kmh_{0.0f};
+    float last_sent_speed_kmh_{-1.0f};
+    uint32_t tick_count_{0};
+    uint32_t last_sent_tick_{0};
 };
 
 }  // namespace body_ecu::body
