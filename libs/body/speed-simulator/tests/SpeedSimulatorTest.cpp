@@ -53,7 +53,7 @@ TEST_F(SpeedSimulatorTest, InitRegistersTimerAndSomeIp) {
     EXPECT_FLOAT_EQ(sim_.getSpeedKmh(), 0.0f);
 }
 
-TEST_F(SpeedSimulatorTest, ZeroThrottleNoSpeed) {
+TEST_F(SpeedSimulatorTest, ZeroAdcMapsToZeroSpeed) {
     EXPECT_CALL(adc_, read(config_.adc_channel)).WillOnce(Return(0));
     std::vector<uint8_t> captured;
     EXPECT_CALL(someip_, sendEvent(config_.service_id,
@@ -70,59 +70,83 @@ TEST_F(SpeedSimulatorTest, ZeroThrottleNoSpeed) {
     EXPECT_FLOAT_EQ(sim_.getSpeedKmh(), 0.0f);
 }
 
-TEST_F(SpeedSimulatorTest, FullThrottleAccelerates) {
-    EXPECT_CALL(adc_, read(_)).WillRepeatedly(Return(4095));
-    EXPECT_CALL(someip_, sendEvent(_, _, _)).Times(5);
+TEST_F(SpeedSimulatorTest, FullAdcMapsToMaxSpeed) {
+    EXPECT_CALL(adc_, read(_)).WillOnce(Return(4095));
+    std::vector<uint8_t> captured;
+    EXPECT_CALL(someip_, sendEvent(_, _, _))
+        .WillOnce(
+            [&](uint16_t, uint16_t, const std::vector<uint8_t>& p) {
+                captured = p;
+            });
 
-    for (int i = 0; i < 5; ++i) {
-        timer_cb_();
-    }
+    timer_cb_();
 
-    EXPECT_GT(sim_.getSpeedKmh(), 0.0f);
-    float expected_after_5_ticks =
-        config_.max_acceleration * 0.1f * 3.6f * 5.0f;
-    EXPECT_NEAR(sim_.getSpeedKmh(), expected_after_5_ticks, 0.1f);
-}
-
-TEST_F(SpeedSimulatorTest, CoastDecelerates) {
-    EXPECT_CALL(adc_, read(_)).WillRepeatedly(Return(4095));
-    EXPECT_CALL(someip_, sendEvent(_, _, _)).Times(10);
-
-    for (int i = 0; i < 10; ++i) {
-        timer_cb_();
-    }
-    float speed_at_throttle = sim_.getSpeedKmh();
-    EXPECT_GT(speed_at_throttle, 0.0f);
-
-    EXPECT_CALL(adc_, read(_)).WillRepeatedly(Return(0));
-    EXPECT_CALL(someip_, sendEvent(_, _, _)).Times(5);
-
-    for (int i = 0; i < 5; ++i) {
-        timer_cb_();
-    }
-
-    EXPECT_LT(sim_.getSpeedKmh(), speed_at_throttle);
-}
-
-TEST_F(SpeedSimulatorTest, SpeedClampsAtMax) {
-    EXPECT_CALL(adc_, read(_)).WillRepeatedly(Return(4095));
-    EXPECT_CALL(someip_, sendEvent(_, _, _)).Times(1000);
-
-    for (int i = 0; i < 1000; ++i) {
-        timer_cb_();
-    }
-
-    EXPECT_LE(sim_.getSpeedKmh(), config_.max_speed_kmh);
+    ASSERT_EQ(captured.size(), 4u);
+    EXPECT_FLOAT_EQ(deserializeFloat(captured), config_.max_speed_kmh);
     EXPECT_FLOAT_EQ(sim_.getSpeedKmh(), config_.max_speed_kmh);
 }
 
-TEST_F(SpeedSimulatorTest, GetSpeedMethod) {
-    EXPECT_CALL(adc_, read(_)).WillRepeatedly(Return(4095));
-    EXPECT_CALL(someip_, sendEvent(_, _, _)).Times(3);
+TEST_F(SpeedSimulatorTest, MidAdcMapsToHalfSpeed) {
+    EXPECT_CALL(adc_, read(_)).WillOnce(Return(2048));
+    std::vector<uint8_t> captured;
+    EXPECT_CALL(someip_, sendEvent(_, _, _))
+        .WillOnce(
+            [&](uint16_t, uint16_t, const std::vector<uint8_t>& p) {
+                captured = p;
+            });
 
-    for (int i = 0; i < 3; ++i) {
-        timer_cb_();
-    }
+    timer_cb_();
+
+    float expected = (2048.0f / 4095.0f) * config_.max_speed_kmh;
+    EXPECT_NEAR(sim_.getSpeedKmh(), expected, 0.1f);
+    EXPECT_NEAR(deserializeFloat(captured), expected, 0.1f);
+}
+
+TEST_F(SpeedSimulatorTest, SpeedTracksAdcImmediately) {
+    EXPECT_CALL(adc_, read(_))
+        .WillOnce(Return(4095))
+        .WillOnce(Return(0));
+    EXPECT_CALL(someip_, sendEvent(_, _, _)).Times(2);
+
+    timer_cb_();
+    EXPECT_FLOAT_EQ(sim_.getSpeedKmh(), config_.max_speed_kmh);
+
+    timer_cb_();
+    EXPECT_FLOAT_EQ(sim_.getSpeedKmh(), 0.0f);
+}
+
+TEST_F(SpeedSimulatorTest, AdcClampedToValidRange) {
+    EXPECT_CALL(adc_, read(_)).WillOnce(Return(5000));
+    EXPECT_CALL(someip_, sendEvent(_, _, _)).Times(1);
+
+    timer_cb_();
+
+    EXPECT_FLOAT_EQ(sim_.getSpeedKmh(), config_.max_speed_kmh);
+}
+
+TEST_F(SpeedSimulatorTest, NegativeAdcClampedToZero) {
+    EXPECT_CALL(adc_, read(_)).WillOnce(Return(-100));
+    EXPECT_CALL(someip_, sendEvent(_, _, _)).Times(1);
+
+    timer_cb_();
+
+    EXPECT_FLOAT_EQ(sim_.getSpeedKmh(), 0.0f);
+}
+
+TEST_F(SpeedSimulatorTest, NoEventWhenSpeedUnchanged) {
+    EXPECT_CALL(adc_, read(_)).WillRepeatedly(Return(2048));
+    EXPECT_CALL(someip_, sendEvent(_, _, _)).Times(1);
+
+    timer_cb_();
+    timer_cb_();
+    timer_cb_();
+}
+
+TEST_F(SpeedSimulatorTest, GetSpeedMethod) {
+    EXPECT_CALL(adc_, read(_)).WillRepeatedly(Return(2048));
+    EXPECT_CALL(someip_, sendEvent(_, _, _)).Times(1);
+
+    timer_cb_();
 
     ports::SomeIpMessage req;
     req.service_id = config_.service_id;
@@ -178,10 +202,10 @@ TEST_F(SpeedSimulatorWithSignalBusTest, PublishesToSignalBus) {
     EXPECT_CALL(someip_, sendEvent(_, _, _)).Times(1);
     EXPECT_CALL(signal_bus_,
                 publish(config_.signal_speed, _))
-        .WillOnce([](const std::string&, const ports::SignalValue& v) {
+        .WillOnce([](const std::string&, const ports::SignalValue& v) -> bool {
             auto* f = std::get_if<float>(&v);
-            ASSERT_NE(f, nullptr);
-            EXPECT_GT(*f, 0.0f);
+            EXPECT_NE(f, nullptr);
+            if (f) EXPECT_GT(*f, 0.0f);
             return true;
         });
 

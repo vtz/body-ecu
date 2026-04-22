@@ -42,35 +42,25 @@ void SpeedSimulator::init() {
 void SpeedSimulator::onTimerTick() {
     int32_t raw = adc_.read(config_.adc_channel);
 
+    current_speed_kmh_ =
+        (static_cast<float>(std::clamp(raw, 0, 4095)) / 4095.0f) *
+        config_.max_speed_kmh;
+
     if (++tick_count_ % 50 == 0) {
-        printk("[speed_sim] adc_ch=%u raw=%d speed=%.1f\n",
+        int speed_int = static_cast<int>(current_speed_kmh_);
+        int speed_frac = static_cast<int>(current_speed_kmh_ * 10) % 10;
+        if (speed_frac < 0) speed_frac = -speed_frac;
+        printk("[speed_sim] adc_ch=%u raw=%d speed=%d.%d\n",
                config_.adc_channel, static_cast<int>(raw),
-               static_cast<double>(current_speed_kmh_));
+               speed_int, speed_frac);
     }
 
-    float throttle =
-        static_cast<float>(std::clamp(raw, 0, 4095)) / 4095.0f;
-
-    float dt = static_cast<float>(config_.update_interval_ms) / 1000.0f;
-    float accel_mps2 = (throttle > 0.01f)
-                           ? throttle * config_.max_acceleration
-                           : -config_.drag_deceleration;
-
-    current_speed_kmh_ += accel_mps2 * dt * 3.6f;
-    current_speed_kmh_ =
-        std::clamp(current_speed_kmh_, 0.0f, config_.max_speed_kmh);
-
-    constexpr float kMinDelta = 2.0f;
-    constexpr uint32_t kMinSendInterval = 10;
-    bool delta_exceeded =
-        std::abs(current_speed_kmh_ - last_sent_speed_kmh_) >= kMinDelta;
-    bool interval_elapsed = (tick_count_ - last_sent_tick_) >= kMinSendInterval;
-    if (delta_exceeded && interval_elapsed) {
+    constexpr float kMinDelta = 0.5f;
+    if (std::abs(current_speed_kmh_ - last_sent_speed_kmh_) >= kMinDelta) {
         auto payload = serializeFloat(current_speed_kmh_);
         someip_.sendEvent(config_.service_id, config_.speed_changed_event,
                           payload);
         last_sent_speed_kmh_ = current_speed_kmh_;
-        last_sent_tick_ = tick_count_;
     }
 
     if (signal_bus_) {

@@ -17,4 +17,12 @@ export:
     type: jumpstarter_driver_pyserial.driver.PySerial
     config:
       url: "/dev/cu.usbmodem1203"
-      baudrate: 115200 
+      baudrate: 115200
+  someip:
+    type: jumpstarter_driver_someip.driver.SomeIp
+    config:
+      host: "192.168.100.1"
+      port: 30490
+      transport_mode: UDP
+      remote_host: "192.168.100.10"
+      remote_port: 30490

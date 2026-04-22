@@ -18,8 +18,6 @@ struct SpeedSimulatorConfig {
     uint16_t eventgroup_id{0x0001};
     uint8_t adc_channel{0};
     float max_speed_kmh{200.0f};
-    float max_acceleration{15.0f};
-    float drag_deceleration{3.0f};
     uint32_t update_interval_ms{100};
     std::string signal_speed{"Vehicle.Speed"};
 };
@@ -49,7 +47,6 @@ private:
     float current_speed_kmh_{0.0f};
     float last_sent_speed_kmh_{-1.0f};
     uint32_t tick_count_{0};
-    uint32_t last_sent_tick_{0};
 };
 
 }  // namespace body_ecu::body
