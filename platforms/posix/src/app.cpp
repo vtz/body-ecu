@@ -69,31 +69,24 @@ void app_main()
         std::printf("[WARN] CAN interface 'vcan0' not available\n");
     }
 
-    std::printf("[init] creating adapters\n");
     static adapters::StdinButtonAdapter button_adapter;
     static ports::NullButtonInput null_button;
     static adapters::InProcessSignalBus signal_bus;
     static adapters::ThreadTimerService timer_service;
 
-    std::printf("[init] creating systems\n");
     static adapters::LightingSystem lighting(gpio_adapter, someip_system);
-    std::printf("[init] lighting ok\n");
     static adapters::DoorLockSystem door_lock(gpio_adapter, null_button,
                                               someip_system,
                                               body::DoorLockConfig{}, &signal_bus);
-    std::printf("[init] door_lock ok\n");
     static adapters::VehicleModeSystem vehicle_mode(someip_system);
-    std::printf("[init] vehicle_mode ok\n");
     static adapters::IgnitionSystem ignition(button_adapter, vehicle_mode,
                                              timer_service,
                                              body::IgnitionConfig{}, &signal_bus);
-    std::printf("[init] ignition ok\n");
 
     static adapters::SimulatedAdcAdapter adc_adapter;
     static adapters::SpeedSimulatorSystem speed_sim(
         adc_adapter, someip_system, timer_service,
         body::SpeedSimulatorConfig{}, &signal_bus);
-    std::printf("[init] speed_sim ok\n");
 
     static std::optional<adapters::CanGatewaySystem> can_gateway;
     if (can_ok) {
@@ -135,12 +128,10 @@ void app_main()
     diagnostics.addProvider(&lighting.controller());
     diagnostics.addProvider(&door_lock.controller());
 
-    std::printf("[init] registering observers\n");
     vehicle_mode.manager().addObserver(&lighting.controller());
     vehicle_mode.manager().addObserver(&door_lock.controller());
     vehicle_mode.manager().addObserver(&speed_sim.simulator());
 
-    std::printf("[init] adding lifecycle components\n");
     lifecycleManager.addComponent("someip",       someip_system,    1);
     lifecycleManager.addComponent("lighting",     lighting,         2);
     lifecycleManager.addComponent("door_lock",    door_lock,        2);
