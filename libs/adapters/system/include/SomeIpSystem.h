@@ -56,6 +56,7 @@ struct SomeIpConfig {
     std::string host{"0.0.0.0"};
     uint16_t port{30490};
     SomeIpRole role{SomeIpRole::Server};
+    bool enable_sd{true};
     std::string sd_multicast{"239.255.255.251"};
     uint16_t sd_port{30491};
     uint32_t sd_offer_interval_ms{5000};
@@ -119,11 +120,13 @@ private:
 
     SomeIpConfig config_;
     bool running_{false};
+    bool dispatching_{false};
     PlatformMutex mutex_;
     std::map<MethodKey, ports::MethodHandler> methods_;
     std::vector<EventRegistration> events_;
     std::vector<ports::SomeIpMessage> sent_events_;
     std::vector<ports::SomeIpMessage> sent_responses_;
+    std::vector<ports::SomeIpMessage> pending_events_;
 
 #ifdef HAS_OPENSOMEIP
     std::shared_ptr<someip::transport::UdpTransport> transport_;

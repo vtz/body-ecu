@@ -8,14 +8,17 @@ zephyr_library_sources(
     src/LightingSystem.cpp
     src/DoorLockSystem.cpp
     src/VehicleModeSystem.cpp
+    src/IgnitionSystem.cpp
     src/CanGatewaySystem.cpp
     src/DiagnosticsSystem.cpp
     src/DoIpTransport.cpp
     src/DoCanTransport.cpp
+    src/SpeedSimulatorSystem.cpp
 )
 zephyr_library_include_directories(include)
 zephyr_library_link_libraries(
-    ports lifecycle lighting door_lock vehicle_mode can_gateway diagnostics)
+    ports lifecycle lighting door_lock vehicle_mode ignition can_gateway diagnostics
+    speed_simulator)
 
 if(CONFIG_SOMEIP)
     zephyr_library_link_libraries(someip_core)

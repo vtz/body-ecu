@@ -15,3 +15,18 @@
 		led2 = &red_led;
 	};
 };
+
+&adc1 {
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	/* PA3 = Arduino A0 = ADC1_INP15 -- potentiometer wiper */
+	channel@f {
+		reg = <15>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_TICKS, 810)>;
+		zephyr,resolution = <12>;
+	};
+};

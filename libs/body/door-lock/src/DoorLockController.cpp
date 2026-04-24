@@ -54,7 +54,7 @@ bool DoorLockController::checkSafetyConstraints() const {
     auto speed = signal_bus_->get(config_.signal_speed);
     if (speed) {
         if (auto* f = std::get_if<float>(&*speed)) {
-            if (*f > 0.0f) return false;
+            if (*f > 5.0f) return false;
         }
     }
 

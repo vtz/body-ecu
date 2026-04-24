@@ -1,10 +1,29 @@
 /* Devicetree overlay for NUCLEO-H755ZI-Q (M7 core) */
 /* Enables Ethernet, CAN, user LEDs, and user button */
 
+&green_led {
+	gpios = <&gpiob 0 GPIO_ACTIVE_HIGH>;
+};
+
+/ {
+	aliases {
+		led1 = &yellow_led;
+		led2 = &red_led;
+	};
+};
+
 &mac {
 	status = "okay";
 };
 
 &fdcan1 {
+	status = "okay";
+};
+
+&adc1 {
+	pinctrl-0 = <&adc1_inp15_pa3>;
+	pinctrl-names = "default";
+	st,adc-clock-source = "SYNC";
+	st,adc-prescaler = <4>;
 	status = "okay";
 };

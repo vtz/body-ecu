@@ -1,5 +1,13 @@
 #include "lighting/LightingController.h"
 
+#ifdef __ZEPHYR__
+#include <zephyr/sys/printk.h>
+#define LIGHT_LOG(...) printk(__VA_ARGS__)
+#else
+#include <cstdio>
+#define LIGHT_LOG(...) std::printf(__VA_ARGS__)
+#endif
+
 namespace body_ecu::body {
 
 LightingController::LightingController(ports::IGpioPort& gpio,
@@ -83,7 +91,13 @@ ports::SomeIpMessage LightingController::handleSetLightState(
     auto light_id = static_cast<LightId>(request.payload[0]);
     bool state = request.payload[1] != 0;
 
+    LIGHT_LOG("[light] set id=%d state=%d\n",
+              static_cast<int>(light_id), state ? 1 : 0);
+
     response.return_code = setLightState(light_id, state) ? 0x00 : 0x01;
+
+    LIGHT_LOG("[light] set done rc=%d\n", response.return_code);
+
     return response;
 }
 

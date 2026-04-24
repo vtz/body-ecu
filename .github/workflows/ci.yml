@@ -156,6 +156,104 @@ jobs:
       - name: Build (MCU)
         run: cmake --build build/posix-mcu -j$(nproc)
 
+  # ── RPM build validation ─────────────────────────────────────────────
+  rpm-build:
+    name: "RPM: Build Validation"
+    runs-on: ubuntu-22.04
+    container:
+      image: fedora:42
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+            rpm-build rpmdevtools \
+            cmake gcc-c++ git-core \
+            systemd-rpm-macros systemd-devel \
+            grpc-devel grpc-plugins \
+            protobuf-devel protobuf-compiler \
+            openssl-devel
+
+      - name: Setup rpmbuild tree
+        run: rpmdev-setuptree
+
+      - name: Create source tarball
+        run: |
+          VERSION=$(rpmspec -q --queryformat '%{version}' packaging/body-ecu-hpc.spec)
+          tar czf ~/rpmbuild/SOURCES/body-ecu-hpc-${VERSION}.tar.gz \
+            --transform "s,^\.,body-ecu-hpc-${VERSION}," \
+            --exclude=build --exclude=.git .
+
+      - name: Build RPM
+        run: rpmbuild -ba packaging/body-ecu-hpc.spec
+
+      - name: Upload RPMs
+        uses: actions/upload-artifact@v4
+        with:
+          name: rpms
+          path: ~/rpmbuild/RPMS/**/*.rpm
+
+  # ── Integration tests (two-process POSIX) ────────────────────────────
+  integration-posix:
+    name: "Integration: Two-Process POSIX"
+    runs-on: ubuntu-22.04
+    needs: posix-build
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout OpenBSW
+        run: |
+          git clone --filter=blob:none --no-checkout \
+            https://github.com/eclipse-openbsw/openbsw.git \
+            "$GITHUB_WORKSPACE/../openbsw"
+          git -C "$GITHUB_WORKSPACE/../openbsw" checkout ${{ env.OPENBSW_REF }}
+
+      - name: Setup vCAN interface
+        run: |
+          sudo modprobe vcan || true
+          sudo ip link add dev vcan0 type vcan || true
+          sudo ip link set up vcan0 || true
+
+      - name: Build POSIX MCU
+        run: |
+          cmake -B build/posix-mcu -S platforms/posix-mcu
+          cmake --build build/posix-mcu -j$(nproc)
+
+      - name: Build POSIX MPU
+        run: |
+          cmake -B build/posix-mpu -S platforms/posix-mpu
+          cmake --build build/posix-mpu -j$(nproc)
+
+      - name: Install pytest
+        run: pip install pytest
+
+      - name: Run two-process integration tests
+        run: |
+          pytest tests/integration/test_two_process.py \
+            --mcu-bin=build/posix-mcu/body_ecu_posix_mcu \
+            --mpu-bin=build/posix-mpu/body_ecu_posix_mpu \
+            -v --tb=short --junit-xml=integration-results.xml
+        timeout-minutes: 5
+
+      - name: Run cloud gateway integration tests
+        run: |
+          pytest tests/integration/test_cloud_gateway.py \
+            --mcu-bin=build/posix-mcu/body_ecu_posix_mcu \
+            --mpu-bin=build/posix-mpu/body_ecu_posix_mpu \
+            -v --tb=short --junit-xml=cloud-gateway-results.xml
+        timeout-minutes: 5
+
+      - name: Publish integration test results
+        uses: EnricoMi/publish-unit-test-result-action@v2
+        if: always()
+        continue-on-error: true
+        with:
+          check_name: "Integration Test Results"
+          files: |
+            integration-results.xml
+            cloud-gateway-results.xml
+
   # ── Tier 3: Zephyr / Renode (requires full west workspace + SDK) ──────
   # TODO: enable once west workspace setup is added to CI.
   #

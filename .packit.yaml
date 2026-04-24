@@ -1,0 +1,41 @@
+upstream_project_url: https://github.com/vtz/body-ecu
+specfile_path: packaging/body-ecu-hpc.spec
+
+srpm_build_deps:
+  - cmake
+  - gcc-c++
+  - git-core
+  - grpc-devel
+  - grpc-plugins
+  - protobuf-devel
+  - openssl-devel
+  - systemd-rpm-macros
+  - systemd-devel
+
+actions:
+  create-archive:
+    - bash -c "tar czf body-ecu-hpc-$(rpmspec -q --queryformat '%{version}' packaging/body-ecu-hpc.spec).tar.gz --transform 's,^\\.,body-ecu-hpc-'$(rpmspec -q --queryformat '%{version}' packaging/body-ecu-hpc.spec)',' --exclude=build --exclude=.git ."
+    - bash -c "echo body-ecu-hpc-$(rpmspec -q --queryformat '%{version}' packaging/body-ecu-hpc.spec).tar.gz"
+
+jobs:
+  - job: copr_build
+    trigger: pull_request
+    targets:
+      - fedora-42-x86_64
+      - fedora-42-aarch64
+      - centos-stream-9-x86_64
+      - centos-stream-9-aarch64
+
+  - job: tests
+    trigger: pull_request
+    targets:
+      - fedora-42-x86_64
+
+  - job: copr_build
+    trigger: commit
+    branch: main
+    targets:
+      - fedora-42-x86_64
+      - fedora-42-aarch64
+      - centos-stream-9-x86_64
+      - centos-stream-9-aarch64

@@ -1,0 +1,6 @@
+using "platforms/boards/nucleo_h753zi.repl"
+
+adcM1S2: Python.PythonPeripheral @ sysbus 0x40022000
+    size: 0x400
+    initable: true
+    filename: "/workspace/body-ecu/renode/stm32h7_adc.py"

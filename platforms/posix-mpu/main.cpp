@@ -12,6 +12,8 @@
 #include "linux_adapters/InProcessSignalBus.h"
 #include "linux_adapters/StubCloudTransport.h"
 
+#include "cli.h"
+
 using namespace body_ecu;
 
 static std::atomic<bool> g_running{true};
@@ -39,8 +41,6 @@ int main(int argc, char* argv[])
         .host = mcu_host, .port = mcu_port, .role = adapters::SomeIpRole::Client};
     adapters::SomeIpSystem someip_client(someip_cfg);
 
-    std::printf("Note: MPU is a SOME/IP client. Events from MCU will appear here.\n");
-
     adapters::InProcessSignalBus signal_bus;
     adapters::StubCloudTransport cloud_transport;
 
@@ -62,34 +62,55 @@ int main(int argc, char* argv[])
     lock_cmd.someip_method_or_event_id = 0x0001;
     bridge.addMapping(lock_cmd);
 
+    adapters::BridgeMapping speed_event;
+    speed_event.signal_path = "Vehicle.Speed";
+    speed_event.direction = adapters::BridgeDirection::EventToSignal;
+    speed_event.someip_service_id = 0x1003;
+    speed_event.someip_method_or_event_id = 0x8001;
+    speed_event.someip_eventgroup_id = 0x0001;
+    bridge.addMapping(speed_event);
+
+    adapters::BridgeMapping mode_event;
+    mode_event.signal_path = "Vehicle.Mode";
+    mode_event.direction = adapters::BridgeDirection::EventToSignal;
+    mode_event.someip_service_id = 0x1002;
+    mode_event.someip_method_or_event_id = 0x8001;
+    mode_event.someip_eventgroup_id = 0x0001;
+    bridge.addMapping(mode_event);
+
+    adapters::BridgeMapping light_event;
+    light_event.signal_path = "Vehicle.Lights.Status";
+    light_event.direction = adapters::BridgeDirection::EventToSignal;
+    light_event.someip_service_id = 0x1000;
+    light_event.someip_method_or_event_id = 0x8001;
+    light_event.someip_eventgroup_id = 0x0001;
+    bridge.addMapping(light_event);
+
     platform::CloudGatewayConfig gw_config;
     platform::CloudGatewayClient gateway(cloud_transport, signal_bus,
                                          gw_config);
 
-    // Level 1: SOME/IP transport
     lifecycle::LifecycleManager lm;
     lm.addComponent("someip_client", someip_client, 1);
 
     lm.transitionToLevel(1);
 
-    // Bridge and gateway init after SOME/IP is up
     bridge.init();
     gateway.init();
 
-    ports::SomeIpMessage status_req;
-    status_req.service_id = 0x1001;
-    status_req.method_id = 0x0003;  // GetStatus
-    status_req.message_type = 0x00; // REQUEST
-    someip_client.sendResponse(status_req);
-    std::printf("Sent initial GetStatus to MCU to register as client.\n");
+    Cli cli(someip_client);
+    cli.init();
 
-    std::printf("\nBody ECU MPU ready. Press Ctrl+C to shut down.\n\n");
+    std::printf("\nBody ECU MPU ready. Type 'help' for available commands.\n\n");
 
-    while (g_running) {
+    cli.start();
+
+    while (g_running && cli.isRunning()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 
     std::printf("\nShutting down...\n");
+    cli.stop();
     gateway.shutdown();
     bridge.shutdown();
     lm.shutdownAll();

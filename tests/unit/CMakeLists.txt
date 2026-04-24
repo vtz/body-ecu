@@ -125,13 +125,15 @@ add_library(adapters_system STATIC
     ${LIBS_ROOT}/adapters/system/src/DiagnosticsSystem.cpp
     ${LIBS_ROOT}/adapters/system/src/DoIpTransport.cpp
     ${LIBS_ROOT}/adapters/system/src/DoCanTransport.cpp
+    ${LIBS_ROOT}/adapters/system/src/SpeedSimulatorSystem.cpp
+    ${LIBS_ROOT}/adapters/system/src/IgnitionSystem.cpp
 )
 target_include_directories(adapters_system PUBLIC
     ${LIBS_ROOT}/adapters/system/include
 )
 target_link_libraries(adapters_system PUBLIC
-    ports lifecycle lighting door_lock vehicle_mode can_gateway diagnostics
-    pthread)
+    ports lifecycle lighting door_lock vehicle_mode ignition can_gateway diagnostics
+    speed_simulator pthread)
 add_subdirectory(${LIBS_ROOT}/adapters/system/tests adapters_system_tests)
 
 # Platform modules
@@ -144,3 +146,13 @@ add_subdirectory(${LIBS_ROOT}/platform/cloud-gateway cloud-gateway)
 add_subdirectory(${LIBS_ROOT}/body/lighting lighting)
 add_subdirectory(${LIBS_ROOT}/body/door-lock door-lock)
 add_subdirectory(${LIBS_ROOT}/body/vehicle-mode vehicle-mode)
+add_subdirectory(${LIBS_ROOT}/body/speed-simulator speed-simulator)
+add_subdirectory(${LIBS_ROOT}/body/ignition ignition)
+
+# Linux adapters (InProcessSignalBus, StubCloudTransport, etc.)
+add_subdirectory(${LIBS_ROOT}/adapters/linux adapters-linux)
+add_subdirectory(${LIBS_ROOT}/adapters/linux/tests adapters_linux_tests)
+
+# AutoSD adapters (SomeIpKuksaBridge -- stub mode, no gRPC/NATS needed)
+add_subdirectory(${LIBS_ROOT}/adapters/autosd adapters-autosd)
+add_subdirectory(${LIBS_ROOT}/adapters/autosd/tests adapters_autosd_tests)

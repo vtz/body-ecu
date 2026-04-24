@@ -9,6 +9,7 @@ A modular Body ECU application built on the **NUCLEO-H755ZI-Q** using
 - **Exterior Lighting** -- SOME/IP service controlling on-board LEDs (headlight, turn, brake)
 - **Door Lock** -- state machine with SOME/IP control and button toggle
 - **Vehicle Mode** -- getter/setter/notifier field (Off, Accessory, Run, Crank)
+- **Speed Simulator** -- potentiometer-driven accelerator simulation, broadcasts speed every 100ms via SOME/IP
 - **SOME/IP-to-CAN Gateway** -- bidirectional message translation driven by YAML config
 - **UDS Diagnostics** -- ReadDataByID, IOControl, ReadDTC over DoIP (Ethernet) and DoCAN (CAN-FD)
 

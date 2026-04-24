@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(body_ecu_posix_mpu CXX)
+project(body_ecu_posix_mpu CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -35,12 +35,17 @@ add_subdirectory(${LIBS_ROOT}/adapters/autosd ${CMAKE_CURRENT_BINARY_DIR}/adapte
 # Linux adapters (InProcessSignalBus, StubCloudTransport)
 add_subdirectory(${LIBS_ROOT}/adapters/linux ${CMAKE_CURRENT_BINARY_DIR}/adapters-linux)
 
-# POSIX MPU executable (bridge + cloud gateway client)
-add_executable(body_ecu_posix_mpu main.cpp)
+# Linenoise (terminal line editing)
+add_library(linenoise STATIC third_party/linenoise.c)
+target_include_directories(linenoise PUBLIC third_party)
+
+# POSIX MPU executable (bridge + cloud gateway client + CLI)
+add_executable(body_ecu_posix_mpu main.cpp cli.cpp)
 target_link_libraries(body_ecu_posix_mpu PRIVATE
     cloud_gateway_client
     adapters_autosd
     adapters_linux
     someip_system
     lifecycle
+    linenoise
 )

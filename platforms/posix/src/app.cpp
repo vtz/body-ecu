@@ -4,15 +4,24 @@
 #include "DoCanTransport.h"
 #include "DoIpTransport.h"
 #include "DoorLockSystem.h"
+#include "SpeedSimulatorSystem.h"
 #include "VehicleInfoProvider.h"
 #include "LightingSystem.h"
+#include "IgnitionSystem.h"
 #include "SomeIpSystem.h"
 #include "VehicleModeSystem.h"
 
+#include "ports/NullButtonInput.h"
+
+#include <cstdlib>
+#include <optional>
+
 #include "linux_adapters/ConsoleGpioAdapter.h"
 #include "linux_adapters/InProcessSignalBus.h"
+#include "linux_adapters/SimulatedAdcAdapter.h"
 #include "linux_adapters/SocketCanAdapter.h"
 #include "linux_adapters/StdinButtonAdapter.h"
+#include "linux_adapters/ThreadTimerService.h"
 
 #include <async/AsyncBinding.h>
 #include <lifecycle/LifecycleManager.h>
@@ -49,45 +58,63 @@ void app_main()
     std::printf("=== Body ECU (POSIX + OpenBSW) ===\n");
     std::printf("Using OpenBSW lifecycle, async framework\n\n");
 
-    adapters::SomeIpConfig someip_cfg{.host = "0.0.0.0", .port = 30490};
+    uint16_t someip_port = 30490;
+    if (const char* env_port = std::getenv("SOMEIP_PORT"))
+        someip_port = static_cast<uint16_t>(std::atoi(env_port));
+    adapters::SomeIpConfig someip_cfg{.host = "0.0.0.0", .port = someip_port};
     static adapters::SomeIpSystem someip_system(someip_cfg);
 
     static adapters::ConsoleGpioAdapter gpio_adapter(
         {"HEADLIGHT (green)", "TURN_SIGNAL (yellow)", "BRAKE (red)"});
 
     static adapters::SocketCanAdapter can_adapter("vcan0");
-    if (!can_adapter.open()) {
+    bool can_ok = can_adapter.open();
+    if (!can_ok) {
         std::printf("[WARN] CAN interface 'vcan0' not available\n");
     }
 
     static adapters::StdinButtonAdapter button_adapter;
+    static ports::NullButtonInput null_button;
     static adapters::InProcessSignalBus signal_bus;
+    static adapters::ThreadTimerService timer_service;
 
     static adapters::LightingSystem lighting(gpio_adapter, someip_system);
-    static adapters::DoorLockSystem door_lock(gpio_adapter, button_adapter,
+    static adapters::DoorLockSystem door_lock(gpio_adapter, null_button,
                                               someip_system,
                                               body::DoorLockConfig{}, &signal_bus);
     static adapters::VehicleModeSystem vehicle_mode(someip_system);
-    static adapters::CanGatewaySystem can_gateway(can_adapter, someip_system);
+    static adapters::IgnitionSystem ignition(button_adapter, vehicle_mode,
+                                             timer_service,
+                                             body::IgnitionConfig{}, &signal_bus);
 
-    platform::ServiceMapping light_gw;
-    light_gw.name = "light_command";
-    light_gw.direction = platform::GatewayDirection::SomeIpToCan;
-    light_gw.someip_service_id = 0x1000;
-    light_gw.someip_method_id = 0x0001;
-    light_gw.can_id = 0x200;
-    light_gw.can_dlc = 4;
-    can_gateway.addMapping(light_gw);
+    static adapters::SimulatedAdcAdapter adc_adapter;
+    static adapters::SpeedSimulatorSystem speed_sim(
+        adc_adapter, someip_system, timer_service,
+        body::SpeedSimulatorConfig{}, &signal_bus);
 
-    platform::ServiceMapping door_gw;
-    door_gw.name = "door_status";
-    door_gw.direction = platform::GatewayDirection::CanToSomeIp;
-    door_gw.someip_service_id = 0x1001;
-    door_gw.someip_event_id = 0x8001;
-    door_gw.someip_eventgroup_id = 0x0001;
-    door_gw.can_id = 0x300;
-    door_gw.can_dlc = 2;
-    can_gateway.addMapping(door_gw);
+    static std::optional<adapters::CanGatewaySystem> can_gateway;
+    if (can_ok) {
+        can_gateway.emplace(can_adapter, someip_system);
+
+        platform::ServiceMapping light_gw;
+        light_gw.name = "light_command";
+        light_gw.direction = platform::GatewayDirection::SomeIpToCan;
+        light_gw.someip_service_id = 0x1000;
+        light_gw.someip_method_id = 0x0001;
+        light_gw.can_id = 0x200;
+        light_gw.can_dlc = 4;
+        can_gateway->addMapping(light_gw);
+
+        platform::ServiceMapping door_gw;
+        door_gw.name = "door_status";
+        door_gw.direction = platform::GatewayDirection::CanToSomeIp;
+        door_gw.someip_service_id = 0x1001;
+        door_gw.someip_event_id = 0x8001;
+        door_gw.someip_eventgroup_id = 0x0001;
+        door_gw.can_id = 0x300;
+        door_gw.can_dlc = 2;
+        can_gateway->addMapping(door_gw);
+    }
 
     static adapters::VehicleInfoProvider vehicle_info;
     vehicle_info.setVin("WVW00000BODYECU01");
@@ -95,24 +122,30 @@ void app_main()
 
     static adapters::DiagnosticsSystem diagnostics;
     static adapters::DoIpTransport doip_transport;
-    static adapters::DoCanTransport docan_transport(can_adapter);
     diagnostics.addTransport(&doip_transport);
-    diagnostics.addTransport(&docan_transport);
+    static std::optional<adapters::DoCanTransport> docan_transport;
+    if (can_ok) {
+        docan_transport.emplace(can_adapter);
+        diagnostics.addTransport(&*docan_transport);
+    }
     diagnostics.addProvider(&vehicle_info);
     diagnostics.addProvider(&lighting.controller());
     diagnostics.addProvider(&door_lock.controller());
 
     vehicle_mode.manager().addObserver(&lighting.controller());
     vehicle_mode.manager().addObserver(&door_lock.controller());
+    vehicle_mode.manager().addObserver(&speed_sim.simulator());
 
     lifecycleManager.addComponent("someip",       someip_system,    1);
     lifecycleManager.addComponent("lighting",     lighting,         2);
     lifecycleManager.addComponent("door_lock",    door_lock,        2);
     lifecycleManager.addComponent("vehicle_mode", vehicle_mode,     2);
-    lifecycleManager.addComponent("can_gateway",  can_gateway,      3);
+    lifecycleManager.addComponent("ignition",     ignition,         2);
+    lifecycleManager.addComponent("speed_sim",    speed_sim,        2);
+    if (can_gateway) lifecycleManager.addComponent("can_gateway", *can_gateway, 3);
     lifecycleManager.addComponent("diagnostics",  diagnostics,      3);
     lifecycleManager.addComponent("doip",         doip_transport,   3);
-    lifecycleManager.addComponent("docan",        docan_transport,  3);
+    if (docan_transport) lifecycleManager.addComponent("docan", *docan_transport, 3);
 
     lifecycleManager.transitionToLevel(MaxNumLevels);
 

@@ -10,6 +10,8 @@ Usage:
     pytest tests/integration/ --ecu-host=<ip> [--ecu-port=30490]
 """
 
+import os
+
 import pytest
 import socket
 import struct
@@ -23,6 +25,14 @@ def pytest_addoption(parser):
                      help="Body ECU SOME/IP port")
     parser.addoption("--doip-port", default=13400, type=int,
                      help="Body ECU DoIP TCP port")
+    parser.addoption("--mcu-bin",
+                     default=os.environ.get("MCU_BIN",
+                                            "build/posix-mcu/body_ecu_posix_mcu"),
+                     help="Path to posix-mcu binary")
+    parser.addoption("--mpu-bin",
+                     default=os.environ.get("MPU_BIN",
+                                            "build/posix-mpu/body_ecu_posix_mpu"),
+                     help="Path to posix-mpu binary")
 
 
 @pytest.fixture
@@ -42,7 +52,7 @@ def doip_port(request):
 
 # ---- SOME/IP helpers ----
 
-SOMEIP_HEADER_FMT = ">HHIHBBH"  # service_id, method_id, length, client/session, proto/iface, msg_type, return_code
+SOMEIP_HEADER_FMT = ">HHIIBBBB"
 SOMEIP_HEADER_SIZE = struct.calcsize(SOMEIP_HEADER_FMT)
 
 
@@ -51,14 +61,15 @@ def build_someip_request(service_id: int, method_id: int,
                          client_id: int = 0x0042,
                          session_id: int = 0x0001) -> bytes:
     """Build a SOME/IP request message."""
-    length = 8 + len(payload)  # request_id(4) + proto/iface(1) + msg_type(1) + return_code(2) + payload
+    length = 8 + len(payload)
     client_session = (client_id << 16) | session_id
     return struct.pack(SOMEIP_HEADER_FMT,
                        service_id, method_id, length,
                        client_session,
                        0x01,  # protocol version
+                       0x01,  # interface version
                        0x00,  # message type: REQUEST
-                       0x0000) + payload
+                       0x00) + payload
 
 
 def parse_someip_response(data: bytes) -> dict:
@@ -70,8 +81,9 @@ def parse_someip_response(data: bytes) -> dict:
         "length": header[2],
         "client_session": header[3],
         "protocol_version": header[4],
-        "message_type": header[5],
-        "return_code": header[6],
+        "interface_version": header[5],
+        "message_type": header[6],
+        "return_code": header[7],
         "payload": data[SOMEIP_HEADER_SIZE:],
     }
 
