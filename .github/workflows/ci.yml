@@ -249,7 +249,9 @@ jobs:
       - name: Publish integration test results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
+        continue-on-error: true
         with:
+          check_name: "Integration Test Results"
           files: |
             integration-results.xml
             cloud-gateway-results.xml
