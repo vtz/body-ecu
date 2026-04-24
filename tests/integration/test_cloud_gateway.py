@@ -31,7 +31,7 @@ LOCK_METHOD = 0x0001
 UNLOCK_METHOD = 0x0002
 GET_STATUS_METHOD = 0x0003
 
-SOMEIP_PORT = 30491  # Different port to avoid conflict with test_two_process
+SOMEIP_PORT = 30500  # Different port to avoid conflict with test_two_process and SD multicast
 STARTUP_TIMEOUT = 15.0
 
 MSG_TYPE_RESPONSE = 0x80

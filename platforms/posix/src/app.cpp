@@ -13,6 +13,7 @@
 
 #include "ports/NullButtonInput.h"
 
+#include <cstdlib>
 #include <optional>
 
 #include "linux_adapters/ConsoleGpioAdapter.h"
@@ -57,7 +58,10 @@ void app_main()
     std::printf("=== Body ECU (POSIX + OpenBSW) ===\n");
     std::printf("Using OpenBSW lifecycle, async framework\n\n");
 
-    adapters::SomeIpConfig someip_cfg{.host = "0.0.0.0", .port = 30490};
+    uint16_t someip_port = 30490;
+    if (const char* env_port = std::getenv("SOMEIP_PORT"))
+        someip_port = static_cast<uint16_t>(std::atoi(env_port));
+    adapters::SomeIpConfig someip_cfg{.host = "0.0.0.0", .port = someip_port};
     static adapters::SomeIpSystem someip_system(someip_cfg);
 
     static adapters::ConsoleGpioAdapter gpio_adapter(
