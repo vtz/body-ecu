@@ -35,22 +35,6 @@ SOMEIP_PORT = 30491  # Different port to avoid conflict with test_two_process
 STARTUP_TIMEOUT = 5.0
 
 
-def pytest_addoption(parser):
-    try:
-        parser.addoption("--mcu-bin",
-                         default=os.environ.get("MCU_BIN",
-                                                "build/posix-mcu/body_ecu_posix_mcu"),
-                         help="Path to posix-mcu binary")
-    except ValueError:
-        pass
-    try:
-        parser.addoption("--mpu-bin",
-                         default=os.environ.get("MPU_BIN",
-                                                "build/posix-mpu/body_ecu_posix_mpu"),
-                         help="Path to posix-mpu binary")
-    except ValueError:
-        pass
-
 
 def build_someip_request(service_id, method_id, payload=b""):
     length = 8 + len(payload)

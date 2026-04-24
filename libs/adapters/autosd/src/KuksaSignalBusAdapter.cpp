@@ -54,6 +54,8 @@ struct KuksaSignalBusAdapter::Impl {
     std::unique_ptr<kuksa::val::v2::VAL::Stub> stub;
     std::atomic<bool> streaming{false};
     std::vector<std::thread> stream_threads;
+    std::mutex ctx_mutex;
+    std::vector<grpc::ClientContext*> stream_contexts;
 };
 
 KuksaSignalBusAdapter::KuksaSignalBusAdapter(const KuksaConfig& config)
@@ -80,10 +82,17 @@ void KuksaSignalBusAdapter::disconnect() {
     if (!connected_) return;
 
     impl_->streaming = false;
+    {
+        std::lock_guard<std::mutex> lock(impl_->ctx_mutex);
+        for (auto* ctx : impl_->stream_contexts) {
+            ctx->TryCancel();
+        }
+    }
     for (auto& t : impl_->stream_threads) {
         if (t.joinable()) t.join();
     }
     impl_->stream_threads.clear();
+    impl_->stream_contexts.clear();
     impl_->stub.reset();
     impl_->channel.reset();
     connected_ = false;
@@ -138,6 +147,10 @@ void KuksaSignalBusAdapter::subscribe(const std::string& path,
         request.add_signal_paths(path);
 
         grpc::ClientContext ctx;
+        {
+            std::lock_guard<std::mutex> lock(impl_->ctx_mutex);
+            impl_->stream_contexts.push_back(&ctx);
+        }
         auto reader = impl_->stub->Subscribe(&ctx, request);
 
         kuksa::val::v2::SubscribeResponse response;
@@ -153,8 +166,6 @@ void KuksaSignalBusAdapter::subscribe(const std::string& path,
                 }
             }
         }
-
-        ctx.TryCancel();
     });
 }
 

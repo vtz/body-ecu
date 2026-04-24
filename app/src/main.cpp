@@ -253,6 +253,8 @@ int main(void)
         vehicle_mode.manager().addObserver(&lighting->controller());
         vehicle_mode.manager().addObserver(&door_lock->controller());
     }
+#endif
+#ifdef CONFIG_ADC
     if (speed_sim) {
         vehicle_mode.manager().addObserver(&speed_sim->simulator());
     }

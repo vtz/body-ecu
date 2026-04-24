@@ -10,6 +10,8 @@ Usage:
     pytest tests/integration/ --ecu-host=<ip> [--ecu-port=30490]
 """
 
+import os
+
 import pytest
 import socket
 import struct
@@ -23,6 +25,14 @@ def pytest_addoption(parser):
                      help="Body ECU SOME/IP port")
     parser.addoption("--doip-port", default=13400, type=int,
                      help="Body ECU DoIP TCP port")
+    parser.addoption("--mcu-bin",
+                     default=os.environ.get("MCU_BIN",
+                                            "build/posix-mcu/body_ecu_posix_mcu"),
+                     help="Path to posix-mcu binary")
+    parser.addoption("--mpu-bin",
+                     default=os.environ.get("MPU_BIN",
+                                            "build/posix-mpu/body_ecu_posix_mpu"),
+                     help="Path to posix-mpu binary")
 
 
 @pytest.fixture

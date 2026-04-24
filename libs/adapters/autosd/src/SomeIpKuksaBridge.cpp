@@ -52,7 +52,10 @@ void SomeIpKuksaBridge::onSomeIpEvent(const ports::SomeIpMessage& msg) {
                 signal_bus_.publish(m.signal_path,
                                    ports::SignalValue{value});
             } else if (!msg.payload.empty()) {
-                bool value = msg.payload.back() != 0;
+                int32_t value = 0;
+                for (auto byte : msg.payload) {
+                    value = (value << 8) | byte;
+                }
                 signal_bus_.publish(m.signal_path,
                                    ports::SignalValue{value});
             }

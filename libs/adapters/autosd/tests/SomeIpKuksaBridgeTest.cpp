@@ -32,7 +32,7 @@ protected:
     BridgeMapping cmd_mapping_;
 };
 
-TEST_F(SomeIpKuksaBridgeTest, EventToSignalPublishesBool) {
+TEST_F(SomeIpKuksaBridgeTest, EventToSignalPublishesIntForSingleByte) {
     SomeIpKuksaBridge bridge(someip_, signal_bus_);
     bridge.addMapping(event_mapping_);
 
@@ -47,7 +47,7 @@ TEST_F(SomeIpKuksaBridgeTest, EventToSignalPublishesBool) {
 
     EXPECT_CALL(signal_bus_,
                 publish("Vehicle.Cabin.Door.Row1.DriverSide.IsLocked",
-                        ports::SignalValue{true}))
+                        ports::SignalValue{int32_t{1}}))
         .WillOnce(Return(true));
 
     ports::SomeIpMessage msg;
@@ -57,7 +57,7 @@ TEST_F(SomeIpKuksaBridgeTest, EventToSignalPublishesBool) {
     handler(msg);
 }
 
-TEST_F(SomeIpKuksaBridgeTest, EventToSignalPublishesFalse) {
+TEST_F(SomeIpKuksaBridgeTest, EventToSignalPublishesZeroForSingleByte) {
     SomeIpKuksaBridge bridge(someip_, signal_bus_);
     bridge.addMapping(event_mapping_);
 
@@ -71,7 +71,7 @@ TEST_F(SomeIpKuksaBridgeTest, EventToSignalPublishesFalse) {
 
     EXPECT_CALL(signal_bus_,
                 publish("Vehicle.Cabin.Door.Row1.DriverSide.IsLocked",
-                        ports::SignalValue{false}))
+                        ports::SignalValue{int32_t{0}}))
         .WillOnce(Return(true));
 
     ports::SomeIpMessage msg;
