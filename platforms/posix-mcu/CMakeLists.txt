@@ -66,6 +66,7 @@ add_subdirectory(${LIBS_ROOT}/body/lighting ${CMAKE_CURRENT_BINARY_DIR}/lighting
 add_subdirectory(${LIBS_ROOT}/body/door-lock ${CMAKE_CURRENT_BINARY_DIR}/door-lock)
 add_subdirectory(${LIBS_ROOT}/body/vehicle-mode ${CMAKE_CURRENT_BINARY_DIR}/vehicle-mode)
 add_subdirectory(${LIBS_ROOT}/body/speed-simulator ${CMAKE_CURRENT_BINARY_DIR}/speed-simulator)
+add_subdirectory(${LIBS_ROOT}/body/ignition ${CMAKE_CURRENT_BINARY_DIR}/ignition)
 
 add_subdirectory(${LIBS_ROOT}/platform/can-gateway ${CMAKE_CURRENT_BINARY_DIR}/can-gateway)
 add_subdirectory(${LIBS_ROOT}/platform/diagnostics ${CMAKE_CURRENT_BINARY_DIR}/diagnostics)
@@ -80,12 +81,13 @@ add_library(adapters_system STATIC
     ${LIBS_ROOT}/adapters/system/src/DoIpTransport.cpp
     ${LIBS_ROOT}/adapters/system/src/DoCanTransport.cpp
     ${LIBS_ROOT}/adapters/system/src/SpeedSimulatorSystem.cpp
+    ${LIBS_ROOT}/adapters/system/src/IgnitionSystem.cpp
 )
 target_include_directories(adapters_system PUBLIC
     ${LIBS_ROOT}/adapters/system/include
 )
 target_link_libraries(adapters_system PUBLIC
-    ports lifecycle lighting door_lock vehicle_mode speed_simulator can_gateway diagnostics
+    ports lifecycle lighting door_lock vehicle_mode speed_simulator ignition can_gateway diagnostics
     someip-transport
 )
 target_compile_definitions(adapters_system PUBLIC HAS_OPENSOMEIP)
