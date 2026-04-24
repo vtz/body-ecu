@@ -209,6 +209,12 @@ jobs:
             "$GITHUB_WORKSPACE/../openbsw"
           git -C "$GITHUB_WORKSPACE/../openbsw" checkout ${{ env.OPENBSW_REF }}
 
+      - name: Setup vCAN interface
+        run: |
+          sudo modprobe vcan || true
+          sudo ip link add dev vcan0 type vcan || true
+          sudo ip link set up vcan0 || true
+
       - name: Build POSIX MCU
         run: |
           cmake -B build/posix-mcu -S platforms/posix-mcu
