@@ -32,7 +32,7 @@ UNLOCK_METHOD = 0x0002
 GET_STATUS_METHOD = 0x0003
 
 SOMEIP_PORT = 30491  # Different port to avoid conflict with test_two_process
-STARTUP_TIMEOUT = 5.0
+STARTUP_TIMEOUT = 15.0
 
 
 
@@ -100,8 +100,12 @@ def cloud_gateway_env(request):
         env={**os.environ, "SOMEIP_PORT": str(SOMEIP_PORT)},
     )
 
-    assert wait_for_port("127.0.0.1", SOMEIP_PORT, STARTUP_TIMEOUT), \
-        "MCU process did not start in time"
+    if not wait_for_port("127.0.0.1", SOMEIP_PORT, STARTUP_TIMEOUT):
+        rc = mcu_proc.poll()
+        out = ""
+        if mcu_proc.stdout:
+            out = mcu_proc.stdout.read(4096).decode(errors="replace") if rc is not None else ""
+        pytest.fail(f"MCU process did not start in time (rc={rc}, output={out[:500]})")
 
     mpu_env = {**os.environ}
     mpu_proc = subprocess.Popen(

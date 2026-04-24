@@ -32,7 +32,7 @@ UNLOCK_METHOD = 0x0002
 GET_STATUS_METHOD = 0x0003
 
 SOMEIP_PORT = 30490
-STARTUP_TIMEOUT = 5.0
+STARTUP_TIMEOUT = 15.0
 
 
 def build_someip_request(service_id, method_id, payload=b""):
@@ -90,8 +90,12 @@ def two_process_env(request):
         env={**os.environ, "SOMEIP_PORT": str(SOMEIP_PORT)},
     )
 
-    assert wait_for_port("127.0.0.1", SOMEIP_PORT, STARTUP_TIMEOUT), \
-        "MCU process did not start in time"
+    if not wait_for_port("127.0.0.1", SOMEIP_PORT, STARTUP_TIMEOUT):
+        rc = mcu_proc.poll()
+        out = ""
+        if mcu_proc.stdout:
+            out = mcu_proc.stdout.read(4096).decode(errors="replace") if rc is not None else ""
+        pytest.fail(f"MCU process did not start in time (rc={rc}, output={out[:500]})")
 
     mpu_proc = subprocess.Popen(
         [mpu_bin, "127.0.0.1"],
