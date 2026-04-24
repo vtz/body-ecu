@@ -34,6 +34,9 @@ GET_STATUS_METHOD = 0x0003
 SOMEIP_PORT = 30490
 STARTUP_TIMEOUT = 15.0
 
+MSG_TYPE_RESPONSE = 0x80
+MSG_TYPE_NOTIFICATION = 0x02
+
 
 def build_someip_request(service_id, method_id, payload=b""):
     length = 8 + len(payload)
@@ -48,9 +51,20 @@ def parse_someip_response(data):
     return {
         "service_id": header[0],
         "method_id": header[1],
+        "message_type": header[6],
         "return_code": header[7],
         "payload": data[SOMEIP_HEADER_SIZE:],
     }
+
+
+def recv_method_response(sock, retries=5):
+    """Receive a SOME/IP method response, skipping event notifications."""
+    for _ in range(retries):
+        data = sock.recv(1024)
+        resp = parse_someip_response(data)
+        if resp["message_type"] == MSG_TYPE_RESPONSE:
+            return resp
+    raise TimeoutError("No method response received after skipping events")
 
 
 def wait_for_port(host, port, timeout):
@@ -139,26 +153,22 @@ class TestTwoProcessIntegration:
         """SOME/IP Lock command to MCU should succeed."""
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 UNLOCK_METHOD))
-        someip_socket.recv(1024)
+        recv_method_response(someip_socket)
 
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 LOCK_METHOD))
-        data = someip_socket.recv(1024)
-        resp = parse_someip_response(data)
-
+        resp = recv_method_response(someip_socket)
         assert resp["return_code"] == 0x00
 
     def test_mcu_status_after_lock(self, someip_socket, two_process_env):
         """After locking, GetStatus should return Locked."""
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 LOCK_METHOD))
-        someip_socket.recv(1024)
+        recv_method_response(someip_socket)
 
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 GET_STATUS_METHOD))
-        data = someip_socket.recv(1024)
-        resp = parse_someip_response(data)
-
+        resp = recv_method_response(someip_socket)
         assert resp["return_code"] == 0x00
         assert resp["payload"][0] == 0x01  # Locked
 
@@ -166,14 +176,13 @@ class TestTwoProcessIntegration:
         """MPU should log the lock state change event from MCU."""
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 UNLOCK_METHOD))
-        someip_socket.recv(1024)
+        recv_method_response(someip_socket)
         time.sleep(0.2)
 
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 LOCK_METHOD))
-        someip_socket.recv(1024)
+        recv_method_response(someip_socket)
 
-        # Give the MPU time to process the event
         time.sleep(0.5)
 
         mpu_proc = two_process_env["mpu"]
@@ -184,14 +193,12 @@ class TestTwoProcessIntegration:
         for method in [LOCK_METHOD, UNLOCK_METHOD, LOCK_METHOD]:
             someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                     method))
-            data = someip_socket.recv(1024)
-            resp = parse_someip_response(data)
+            resp = recv_method_response(someip_socket)
             assert resp["return_code"] == 0x00
 
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 GET_STATUS_METHOD))
-        data = someip_socket.recv(1024)
-        resp = parse_someip_response(data)
+        resp = recv_method_response(someip_socket)
         assert resp["payload"][0] == 0x01  # Locked
 
     def test_processes_survive_rapid_commands(self, someip_socket,
@@ -200,10 +207,10 @@ class TestTwoProcessIntegration:
         for _ in range(10):
             someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                     LOCK_METHOD))
-            someip_socket.recv(1024)
+            recv_method_response(someip_socket)
             someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                     UNLOCK_METHOD))
-            someip_socket.recv(1024)
+            recv_method_response(someip_socket)
 
         assert two_process_env["mcu"].poll() is None, "MCU crashed"
         assert two_process_env["mpu"].poll() is None, "MPU crashed"

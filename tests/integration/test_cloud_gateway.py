@@ -34,6 +34,7 @@ GET_STATUS_METHOD = 0x0003
 SOMEIP_PORT = 30491  # Different port to avoid conflict with test_two_process
 STARTUP_TIMEOUT = 15.0
 
+MSG_TYPE_RESPONSE = 0x80
 
 
 def build_someip_request(service_id, method_id, payload=b""):
@@ -49,9 +50,20 @@ def parse_someip_response(data):
     return {
         "service_id": header[0],
         "method_id": header[1],
+        "message_type": header[6],
         "return_code": header[7],
         "payload": data[SOMEIP_HEADER_SIZE:],
     }
+
+
+def recv_method_response(sock, retries=5):
+    """Receive a SOME/IP method response, skipping event notifications."""
+    for _ in range(retries):
+        data = sock.recv(1024)
+        resp = parse_someip_response(data)
+        if resp["message_type"] == MSG_TYPE_RESPONSE:
+            return resp
+    raise TimeoutError("No method response received after skipping events")
 
 
 def wait_for_port(host, port, timeout):
@@ -155,12 +167,12 @@ class TestCloudGatewayStub:
         process should remain healthy after receiving the event."""
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 UNLOCK_METHOD))
-        someip_socket.recv(1024)
+        recv_method_response(someip_socket)
         time.sleep(0.2)
 
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 LOCK_METHOD))
-        someip_socket.recv(1024)
+        recv_method_response(someip_socket)
 
         time.sleep(0.5)
 
@@ -172,12 +184,12 @@ class TestCloudGatewayStub:
         """Unlocking via SOME/IP should also propagate."""
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 LOCK_METHOD))
-        someip_socket.recv(1024)
+        recv_method_response(someip_socket)
         time.sleep(0.2)
 
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 UNLOCK_METHOD))
-        someip_socket.recv(1024)
+        recv_method_response(someip_socket)
 
         time.sleep(0.5)
 
@@ -190,10 +202,10 @@ class TestCloudGatewayStub:
         for _ in range(20):
             someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                     LOCK_METHOD))
-            someip_socket.recv(1024)
+            recv_method_response(someip_socket)
             someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                     UNLOCK_METHOD))
-            someip_socket.recv(1024)
+            recv_method_response(someip_socket)
 
         time.sleep(0.5)
         assert cloud_gateway_env["mcu"].poll() is None, "MCU crashed"
@@ -214,7 +226,7 @@ class TestCloudGatewayNats:
         (full NATS verification requires a NATS subscriber in the test)."""
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 LOCK_METHOD))
-        someip_socket.recv(1024)
+        recv_method_response(someip_socket)
         time.sleep(0.5)
 
         assert cloud_gateway_env["mpu"].poll() is None, \
