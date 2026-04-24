@@ -30,6 +30,12 @@ if(BODY_ECU_REAL_ADAPTERS)
     )
     FetchContent_MakeAvailable(cnats)
 
+    # cnats exports src/ but public headers live in src/include/
+    if(TARGET nats_static)
+        target_include_directories(nats_static INTERFACE
+            "${cnats_SOURCE_DIR}/src/include")
+    endif()
+
     find_package(PkgConfig)
     if(PkgConfig_FOUND)
         pkg_check_modules(SYSTEMD libsystemd)
