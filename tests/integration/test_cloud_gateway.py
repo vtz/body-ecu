@@ -23,7 +23,7 @@ import time
 import pytest
 
 
-SOMEIP_HEADER_FMT = ">HHIHBBH"
+SOMEIP_HEADER_FMT = ">HHIIBBBB"
 SOMEIP_HEADER_SIZE = struct.calcsize(SOMEIP_HEADER_FMT)
 
 DOOR_LOCK_SERVICE_ID = 0x1001
@@ -41,7 +41,7 @@ def build_someip_request(service_id, method_id, payload=b""):
     client_session = (0x0042 << 16) | 0x0001
     return struct.pack(SOMEIP_HEADER_FMT,
                        service_id, method_id, length,
-                       client_session, 0x01, 0x00, 0x0000) + payload
+                       client_session, 0x01, 0x01, 0x00, 0x00) + payload
 
 
 def parse_someip_response(data):
@@ -49,7 +49,7 @@ def parse_someip_response(data):
     return {
         "service_id": header[0],
         "method_id": header[1],
-        "return_code": header[6],
+        "return_code": header[7],
         "payload": data[SOMEIP_HEADER_SIZE:],
     }
 

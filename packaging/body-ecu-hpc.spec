@@ -1,4 +1,4 @@
-%global cmake_build_dir %{_builddir}/%{name}-%{version}/build
+%global cmake_build_dir %{__cmake_builddir}
 
 Name:           body-ecu-hpc
 Version:        0.2.0
