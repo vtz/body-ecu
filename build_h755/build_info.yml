@@ -1,0 +1,53 @@
+cmake:
+  application:
+    configuration-dir: '/Users/vzein/Projects/spikes/body-ecu/app'
+    source-dir: '/Users/vzein/Projects/spikes/body-ecu/app'
+  board:
+    name: 'nucleo_h755zi_q'
+    path:
+     - '/Users/vzein/Projects/spikes/zephyr/boards/st/nucleo_h755zi_q'
+    qualifiers: 'stm32h755xx/m7'
+    revision: ''
+  devicetree:
+    bindings-dirs:
+     - '/Users/vzein/Projects/spikes/zephyr/dts/bindings'
+    files:
+     - '/Users/vzein/Projects/spikes/zephyr/boards/st/nucleo_h755zi_q/nucleo_h755zi_q_stm32h755xx_m7.dts'
+     - '/Users/vzein/Projects/spikes/body-ecu/app/boards/nucleo_h755zi_q_stm32h755xx_m7.overlay'
+    include-dirs:
+     - '/Users/vzein/Projects/spikes/modules/hal/stm32/dts'
+     - '/Users/vzein/Projects/spikes/zephyr/include'
+     - '/Users/vzein/Projects/spikes/zephyr/include/zephyr'
+     - '/Users/vzein/Projects/spikes/zephyr/dts/common'
+     - '/Users/vzein/Projects/spikes/zephyr/dts/vendor'
+     - '/Users/vzein/Projects/spikes/zephyr/dts/rx'
+     - '/Users/vzein/Projects/spikes/zephyr/dts/x86'
+     - '/Users/vzein/Projects/spikes/zephyr/dts/xtensa'
+     - '/Users/vzein/Projects/spikes/zephyr/dts/sparc'
+     - '/Users/vzein/Projects/spikes/zephyr/dts/riscv'
+     - '/Users/vzein/Projects/spikes/zephyr/dts/posix'
+     - '/Users/vzein/Projects/spikes/zephyr/dts/arm64'
+     - '/Users/vzein/Projects/spikes/zephyr/dts/arm'
+     - '/Users/vzein/Projects/spikes/zephyr/dts/arc'
+     - '/Users/vzein/Projects/spikes/zephyr/dts'
+    user-files:
+     - '/Users/vzein/Projects/spikes/body-ecu/app/boards/nucleo_h755zi_q_stm32h755xx_m7.overlay'
+  kconfig:
+    files:
+     - '/Users/vzein/Projects/spikes/zephyr/boards/st/nucleo_h755zi_q/nucleo_h755zi_q_stm32h755xx_m7_defconfig'
+     - '/Users/vzein/Projects/spikes/body-ecu/app/prj.conf'
+     - '/Users/vzein/Projects/spikes/body-ecu/app/boards/nucleo_h755zi_q_stm32h755xx_m7.conf'
+    user-files:
+     - '/Users/vzein/Projects/spikes/body-ecu/app/prj.conf'
+     - '/Users/vzein/Projects/spikes/body-ecu/app/boards/nucleo_h755zi_q_stm32h755xx_m7.conf'
+  toolchain:
+    name: 'zephyr'
+    path: '/Users/vzein/zephyr-sdk-0.17.0'
+  zephyr:
+    version: '4.1.99'
+    zephyr-base: '/Users/vzein/Projects/spikes/zephyr'
+version: '0.1.0'
+west:
+  command: '/Users/vzein/.local/bin/west build -b nucleo_h755zi_q/stm32h755xx/m7 app -d build_h755 --pristine'
+  topdir: '/Users/vzein/Projects/spikes'
+  version: '1.5.0'

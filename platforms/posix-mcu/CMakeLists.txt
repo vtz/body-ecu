@@ -105,7 +105,9 @@ target_link_libraries(body_ecu_posix_mcu PRIVATE
     lifecycle
     asyncBinding
     asyncFreeRtos
+    $<$<PLATFORM_ID:Linux>:-Wl,--whole-archive>
     asyncFreeRtosImpl
+    $<$<PLATFORM_ID:Linux>:-Wl,--no-whole-archive>
     logger
     loggerIntegration
     bspInterruptsImpl

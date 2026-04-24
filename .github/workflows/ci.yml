@@ -229,7 +229,6 @@ jobs:
         run: pip install pytest
 
       - name: Run two-process integration tests
-        continue-on-error: true
         run: |
           pytest tests/integration/test_two_process.py \
             --mcu-bin=build/posix-mcu/body_ecu_posix_mcu \
@@ -238,7 +237,6 @@ jobs:
         timeout-minutes: 5
 
       - name: Run cloud gateway integration tests
-        continue-on-error: true
         run: |
           pytest tests/integration/test_cloud_gateway.py \
             --mcu-bin=build/posix-mcu/body_ecu_posix_mcu \
