@@ -13,6 +13,8 @@
 
 #include "ports/NullButtonInput.h"
 
+#include <optional>
+
 #include "linux_adapters/ConsoleGpioAdapter.h"
 #include "linux_adapters/InProcessSignalBus.h"
 #include "linux_adapters/SimulatedAdcAdapter.h"
@@ -62,7 +64,8 @@ void app_main()
         {"HEADLIGHT (green)", "TURN_SIGNAL (yellow)", "BRAKE (red)"});
 
     static adapters::SocketCanAdapter can_adapter("vcan0");
-    if (!can_adapter.open()) {
+    bool can_ok = can_adapter.open();
+    if (!can_ok) {
         std::printf("[WARN] CAN interface 'vcan0' not available\n");
     }
 
@@ -85,26 +88,29 @@ void app_main()
         adc_adapter, someip_system, timer_service,
         body::SpeedSimulatorConfig{}, &signal_bus);
 
-    static adapters::CanGatewaySystem can_gateway(can_adapter, someip_system);
+    static std::optional<adapters::CanGatewaySystem> can_gateway;
+    if (can_ok) {
+        can_gateway.emplace(can_adapter, someip_system);
 
-    platform::ServiceMapping light_gw;
-    light_gw.name = "light_command";
-    light_gw.direction = platform::GatewayDirection::SomeIpToCan;
-    light_gw.someip_service_id = 0x1000;
-    light_gw.someip_method_id = 0x0001;
-    light_gw.can_id = 0x200;
-    light_gw.can_dlc = 4;
-    can_gateway.addMapping(light_gw);
+        platform::ServiceMapping light_gw;
+        light_gw.name = "light_command";
+        light_gw.direction = platform::GatewayDirection::SomeIpToCan;
+        light_gw.someip_service_id = 0x1000;
+        light_gw.someip_method_id = 0x0001;
+        light_gw.can_id = 0x200;
+        light_gw.can_dlc = 4;
+        can_gateway->addMapping(light_gw);
 
-    platform::ServiceMapping door_gw;
-    door_gw.name = "door_status";
-    door_gw.direction = platform::GatewayDirection::CanToSomeIp;
-    door_gw.someip_service_id = 0x1001;
-    door_gw.someip_event_id = 0x8001;
-    door_gw.someip_eventgroup_id = 0x0001;
-    door_gw.can_id = 0x300;
-    door_gw.can_dlc = 2;
-    can_gateway.addMapping(door_gw);
+        platform::ServiceMapping door_gw;
+        door_gw.name = "door_status";
+        door_gw.direction = platform::GatewayDirection::CanToSomeIp;
+        door_gw.someip_service_id = 0x1001;
+        door_gw.someip_event_id = 0x8001;
+        door_gw.someip_eventgroup_id = 0x0001;
+        door_gw.can_id = 0x300;
+        door_gw.can_dlc = 2;
+        can_gateway->addMapping(door_gw);
+    }
 
     static adapters::VehicleInfoProvider vehicle_info;
     vehicle_info.setVin("WVW00000BODYECU01");
@@ -112,9 +118,12 @@ void app_main()
 
     static adapters::DiagnosticsSystem diagnostics;
     static adapters::DoIpTransport doip_transport;
-    static adapters::DoCanTransport docan_transport(can_adapter);
     diagnostics.addTransport(&doip_transport);
-    diagnostics.addTransport(&docan_transport);
+    static std::optional<adapters::DoCanTransport> docan_transport;
+    if (can_ok) {
+        docan_transport.emplace(can_adapter);
+        diagnostics.addTransport(&*docan_transport);
+    }
     diagnostics.addProvider(&vehicle_info);
     diagnostics.addProvider(&lighting.controller());
     diagnostics.addProvider(&door_lock.controller());
@@ -129,10 +138,10 @@ void app_main()
     lifecycleManager.addComponent("vehicle_mode", vehicle_mode,     2);
     lifecycleManager.addComponent("ignition",     ignition,         2);
     lifecycleManager.addComponent("speed_sim",    speed_sim,        2);
-    lifecycleManager.addComponent("can_gateway",  can_gateway,      3);
+    if (can_gateway) lifecycleManager.addComponent("can_gateway", *can_gateway, 3);
     lifecycleManager.addComponent("diagnostics",  diagnostics,      3);
     lifecycleManager.addComponent("doip",         doip_transport,   3);
-    lifecycleManager.addComponent("docan",        docan_transport,  3);
+    if (docan_transport) lifecycleManager.addComponent("docan", *docan_transport, 3);
 
     lifecycleManager.transitionToLevel(MaxNumLevels);
 
