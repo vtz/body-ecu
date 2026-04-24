@@ -7,8 +7,11 @@
 #include "SpeedSimulatorSystem.h"
 #include "VehicleInfoProvider.h"
 #include "LightingSystem.h"
+#include "IgnitionSystem.h"
 #include "SomeIpSystem.h"
 #include "VehicleModeSystem.h"
+
+#include "ports/NullButtonInput.h"
 
 #include "linux_adapters/ConsoleGpioAdapter.h"
 #include "linux_adapters/InProcessSignalBus.h"
@@ -64,16 +67,20 @@ void app_main()
     }
 
     static adapters::StdinButtonAdapter button_adapter;
+    static ports::NullButtonInput null_button;
     static adapters::InProcessSignalBus signal_bus;
+    static adapters::ThreadTimerService timer_service;
 
     static adapters::LightingSystem lighting(gpio_adapter, someip_system);
-    static adapters::DoorLockSystem door_lock(gpio_adapter, button_adapter,
+    static adapters::DoorLockSystem door_lock(gpio_adapter, null_button,
                                               someip_system,
                                               body::DoorLockConfig{}, &signal_bus);
     static adapters::VehicleModeSystem vehicle_mode(someip_system);
+    static adapters::IgnitionSystem ignition(button_adapter, vehicle_mode,
+                                             timer_service,
+                                             body::IgnitionConfig{}, &signal_bus);
 
     static adapters::SimulatedAdcAdapter adc_adapter;
-    static adapters::ThreadTimerService timer_service;
     static adapters::SpeedSimulatorSystem speed_sim(
         adc_adapter, someip_system, timer_service,
         body::SpeedSimulatorConfig{}, &signal_bus);
@@ -114,11 +121,13 @@ void app_main()
 
     vehicle_mode.manager().addObserver(&lighting.controller());
     vehicle_mode.manager().addObserver(&door_lock.controller());
+    vehicle_mode.manager().addObserver(&speed_sim.simulator());
 
     lifecycleManager.addComponent("someip",       someip_system,    1);
     lifecycleManager.addComponent("lighting",     lighting,         2);
     lifecycleManager.addComponent("door_lock",    door_lock,        2);
     lifecycleManager.addComponent("vehicle_mode", vehicle_mode,     2);
+    lifecycleManager.addComponent("ignition",     ignition,         2);
     lifecycleManager.addComponent("speed_sim",    speed_sim,        2);
     lifecycleManager.addComponent("can_gateway",  can_gateway,      3);
     lifecycleManager.addComponent("diagnostics",  diagnostics,      3);

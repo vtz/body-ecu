@@ -120,11 +120,13 @@ private:
 
     SomeIpConfig config_;
     bool running_{false};
+    bool dispatching_{false};
     PlatformMutex mutex_;
     std::map<MethodKey, ports::MethodHandler> methods_;
     std::vector<EventRegistration> events_;
     std::vector<ports::SomeIpMessage> sent_events_;
     std::vector<ports::SomeIpMessage> sent_responses_;
+    std::vector<ports::SomeIpMessage> pending_events_;
 
 #ifdef HAS_OPENSOMEIP
     std::shared_ptr<someip::transport::UdpTransport> transport_;

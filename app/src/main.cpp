@@ -29,8 +29,11 @@ LOG_MODULE_REGISTER(body_ecu, LOG_LEVEL_INF);
 #include "VehicleInfoProvider.h"
 #include "LightingSystem.h"
 #include "SomeIpSystem.h"
+#include "IgnitionSystem.h"
 #include "SpeedSimulatorSystem.h"
 #include "VehicleModeSystem.h"
+
+#include "ports/NullButtonInput.h"
 
 #ifdef CONFIG_GPIO
 #include "zephyr_adapters/ButtonAdapter.h"
@@ -142,7 +145,21 @@ int main(void)
     if (gpio_ok) {
         button_adapter.configure();
     }
-    if (!gpio_ok) {
+    if (gpio_ok) {
+        for (int blink = 0; blink < 3; ++blink) {
+            for (size_t i = 0; i < ARRAY_SIZE(leds); ++i) {
+                int rc = gpio_pin_set_dt(&leds[i], 1);
+                printk("[blink] led%zu ON rc=%d (port=%p pin=%d)\n",
+                       i, rc, (void*)leds[i].port, leds[i].pin);
+            }
+            k_msleep(200);
+            for (size_t i = 0; i < ARRAY_SIZE(leds); ++i) {
+                gpio_pin_set_dt(&leds[i], 0);
+            }
+            k_msleep(200);
+        }
+        LOG_INF("LED blink test done (3 LEDs x 3 blinks)");
+    } else {
         LOG_WRN("GPIO not available -- using software-only door-lock (emulation)");
     }
 #endif
@@ -160,13 +177,14 @@ int main(void)
     LOG_INF("CP3: LocalSignalBus done");
 
 #ifdef CONFIG_GPIO
+    static ports::NullButtonInput null_button;
     std::optional<adapters::LightingSystem> lighting;
     std::optional<adapters::DoorLockSystem> door_lock;
     if (gpio_ok) {
         lighting.emplace(gpio_adapter, someip_system);
         body::DoorLockConfig door_cfg;
         door_cfg.lock_gpio_pin = 2;
-        door_lock.emplace(gpio_adapter, button_adapter, someip_system,
+        door_lock.emplace(gpio_adapter, null_button, someip_system,
                           door_cfg, &signal_bus);
     }
 #endif
@@ -189,17 +207,16 @@ int main(void)
     static adapters::VehicleModeSystem vehicle_mode(someip_system);
     LOG_INF("CP5: VehicleModeSystem done");
 
+#ifdef CONFIG_GPIO
+    std::optional<adapters::IgnitionSystem> ignition;
+    if (gpio_ok) {
+        ignition.emplace(button_adapter, vehicle_mode, timer_service,
+                         body::IgnitionConfig{}, &signal_bus);
+    }
+#endif
+
 #ifdef CONFIG_CAN
     static adapters::CanGatewaySystem can_gateway(can_adapter, someip_system);
-
-    platform::ServiceMapping light_gw;
-    light_gw.name = "light_command";
-    light_gw.direction = platform::GatewayDirection::SomeIpToCan;
-    light_gw.someip_service_id = 0x1000;
-    light_gw.someip_method_id = 0x0001;
-    light_gw.can_id = 0x200;
-    light_gw.can_dlc = 4;
-    can_gateway.addMapping(light_gw);
 
     platform::ServiceMapping door_gw;
     door_gw.name = "door_status";
@@ -236,6 +253,9 @@ int main(void)
         vehicle_mode.manager().addObserver(&lighting->controller());
         vehicle_mode.manager().addObserver(&door_lock->controller());
     }
+    if (speed_sim) {
+        vehicle_mode.manager().addObserver(&speed_sim->simulator());
+    }
 #endif
 
     LOG_INF("CP10: adding lifecycle components");
@@ -245,6 +265,9 @@ int main(void)
     if (door_lock) lifecycleManager.addComponent("door_lock", *door_lock, 2);
 #endif
     lifecycleManager.addComponent("vehicle_mode", vehicle_mode, 2);
+#ifdef CONFIG_GPIO
+    if (ignition) lifecycleManager.addComponent("ignition", *ignition, 2);
+#endif
 #ifdef CONFIG_ADC
     if (speed_sim) lifecycleManager.addComponent("speed_sim", *speed_sim, 2);
 #endif
@@ -307,6 +330,13 @@ int main(void)
                 resp.message_type = 0x80;
                 resp.return_code = 0x00;
                 resp.payload = {0, 0, 0, 0};
+                return resp;
+            });
+        someip_system.registerMethod(scfg.service_id, scfg.set_speed_method,
+            [](const ports::SomeIpMessage& req) {
+                ports::SomeIpMessage resp = req;
+                resp.message_type = 0x80;
+                resp.return_code = 0x00;
                 return resp;
             });
         someip_system.registerEvent(scfg.service_id,

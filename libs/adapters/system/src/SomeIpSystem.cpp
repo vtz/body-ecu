@@ -1,6 +1,12 @@
 #include "SomeIpSystem.h"
 
+#ifdef __ZEPHYR__
+#include <zephyr/sys/printk.h>
+#define SOMEIP_LOG(...) printk(__VA_ARGS__)
+#else
 #include <cstdio>
+#define SOMEIP_LOG(...) std::printf(__VA_ARGS__)
+#endif
 
 namespace body_ecu::adapters {
 
@@ -168,28 +174,29 @@ void SomeIpSystem::sendEvent(uint16_t service_id, uint16_t event_id,
     msg.message_type = 0x02;  // Notification
     msg.return_code = 0x00;
     msg.payload = payload;
+#ifndef HAS_OPENSOMEIP
     sent_events_.push_back(msg);
+#endif
 
 #ifdef HAS_OPENSOMEIP
+    if (dispatching_) {
+        pending_events_.push_back(msg);
+        return;
+    }
     if (transport_ && running_) {
         auto someip_msg = toSomeIp(msg);
         PlatformLockGuard lock(mutex_);
-        std::printf("[SOME/IP] sendEvent svc=0x%04X evt=0x%04X clients=%zu\n",
-                    service_id, event_id,
-                    known_clients_.size());
         for (const auto& client : known_clients_) {
             (void)transport_->send_message(someip_msg, client);
         }
-    } else {
-        std::printf("[SOME/IP] sendEvent SKIPPED transport=%p running=%d\n",
-                    static_cast<void*>(transport_.get()),
-                    running_ ? 1 : 0);
     }
 #endif
 }
 
 void SomeIpSystem::sendResponse(const ports::SomeIpMessage& response) {
+#ifndef HAS_OPENSOMEIP
     sent_responses_.push_back(response);
+#endif
 
 #ifdef HAS_OPENSOMEIP
     if (transport_ && running_) {
@@ -208,11 +215,14 @@ void SomeIpSystem::sendResponse(const ports::SomeIpMessage& response) {
 
 ports::SomeIpMessage SomeIpSystem::dispatch(
     const ports::SomeIpMessage& request) {
+    SOMEIP_LOG("[SOME/IP] dispatch: lookup 0x%04X/0x%04X\n",
+               request.service_id, request.method_id);
     ports::MethodHandler handler;
     {
         PlatformLockGuard lock(mutex_);
         auto it = methods_.find(makeKey(request.service_id, request.method_id));
         if (it == methods_.end()) {
+            SOMEIP_LOG("[SOME/IP] dispatch: method NOT FOUND\n");
             ports::SomeIpMessage err = request;
             err.message_type = 0x81;  // Error
             err.return_code = 0x05;   // E_NOT_OK
@@ -220,7 +230,11 @@ ports::SomeIpMessage SomeIpSystem::dispatch(
         }
         handler = it->second;
     }
-    return handler(request);
+    SOMEIP_LOG("[SOME/IP] dispatch: calling handler\n");
+    auto response = handler(request);
+    SOMEIP_LOG("[SOME/IP] dispatch: handler returned rc=0x%02X\n",
+               response.return_code);
+    return response;
 }
 
 // --- opensomeip transport integration ---
@@ -239,18 +253,35 @@ void SomeIpSystem::on_message_received(
 
     auto incoming = fromSomeIp(*message);
 
-    std::printf("[SOME/IP] Received service=0x%04X method=0x%04X type=0x%02X from %s payload=[",
-                incoming.service_id, incoming.method_id,
-                incoming.message_type, sender.to_string().c_str());
+    SOMEIP_LOG("[SOME/IP] Received service=0x%04X method=0x%04X type=0x%02X from %s payload=[",
+               incoming.service_id, incoming.method_id,
+               incoming.message_type, sender.to_string().c_str());
     for (size_t i = 0; i < incoming.payload.size(); ++i) {
-        std::printf("%s0x%02X", i ? " " : "", incoming.payload[i]);
+        SOMEIP_LOG("%s0x%02X", i ? " " : "", incoming.payload[i]);
     }
-    std::printf("]\n");
+    SOMEIP_LOG("]\n");
 
     if (message->is_request()) {
+        SOMEIP_LOG("[SOME/IP] >> dispatch\n");
+        dispatching_ = true;
         auto response = dispatch(incoming);
+        dispatching_ = false;
+        SOMEIP_LOG("[SOME/IP] << dispatch rc=0x%02X pending=%zu\n",
+                   response.return_code, pending_events_.size());
+        response.message_type = 0x80;  // RESPONSE
         auto resp_msg = toSomeIp(response);
+        SOMEIP_LOG("[SOME/IP] >> send response\n");
         (void)transport_->send_message(resp_msg, sender);
+        SOMEIP_LOG("[SOME/IP] << send response OK\n");
+
+        for (auto& evt : pending_events_) {
+            auto evt_msg = toSomeIp(evt);
+            PlatformLockGuard lock(mutex_);
+            for (const auto& client : known_clients_) {
+                (void)transport_->send_message(evt_msg, client);
+            }
+        }
+        pending_events_.clear();
     } else {
         ports::MethodHandler handler;
         {
@@ -269,20 +300,20 @@ void SomeIpSystem::on_message_received(
 
 void SomeIpSystem::on_connection_established(
     const someip::transport::Endpoint& endpoint) {
-    std::printf("[SOME/IP] Connection established: %s\n",
-                endpoint.to_string().c_str());
+    SOMEIP_LOG("[SOME/IP] Connection established: %s\n",
+               endpoint.to_string().c_str());
 }
 
 void SomeIpSystem::on_connection_lost(
     const someip::transport::Endpoint& endpoint) {
-    std::printf("[SOME/IP] Connection lost: %s\n",
-                endpoint.to_string().c_str());
+    SOMEIP_LOG("[SOME/IP] Connection lost: %s\n",
+               endpoint.to_string().c_str());
     PlatformLockGuard lock(mutex_);
     known_clients_.erase(endpoint);
 }
 
 void SomeIpSystem::on_error(someip::Result error) {
-    std::printf("[SOME/IP] Transport error: %d\n", static_cast<int>(error));
+    SOMEIP_LOG("[SOME/IP] Transport error: %d\n", static_cast<int>(error));
 }
 
 ports::SomeIpMessage SomeIpSystem::fromSomeIp(const someip::Message& msg) {
