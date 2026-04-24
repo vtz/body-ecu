@@ -4,7 +4,7 @@
 
 #ifdef HAS_NATS
 
-#include <nats/nats.h>
+#include <nats.h>
 
 namespace body_ecu::adapters {
 
