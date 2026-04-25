@@ -82,3 +82,37 @@ target_link_libraries(app PRIVATE
     loggerIntegration
     etl
 )
+
+# Stage firmware + Renode scripts in one place for CI/packaging.
+set(BODY_ECU_ARTIFACTS_DIR ${CMAKE_BINARY_DIR}/artifacts)
+set(BODY_ECU_FIRMWARE_ARTIFACTS
+    ${CMAKE_BINARY_DIR}/zephyr/zephyr.elf
+    ${CMAKE_BINARY_DIR}/zephyr/zephyr.hex
+    ${CMAKE_BINARY_DIR}/zephyr/zephyr.bin
+)
+set(BODY_ECU_RENODE_RESC_FILES
+    ${CMAKE_CURRENT_SOURCE_DIR}/../renode/body_ecu.resc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../renode/body_ecu_vnet.resc
+    ${CMAKE_CURRENT_SOURCE_DIR}/../renode/body_ecu_renode_tap.resc
+)
+
+set(BODY_ECU_ARTIFACT_DEPENDENCY_TARGET app)
+if(TARGET zephyr_final)
+    set(BODY_ECU_ARTIFACT_DEPENDENCY_TARGET zephyr_final)
+elseif(TARGET zephyr)
+    set(BODY_ECU_ARTIFACT_DEPENDENCY_TARGET zephyr)
+endif()
+
+add_custom_target(body_ecu_artifacts ALL
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${BODY_ECU_ARTIFACTS_DIR}/firmware
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${BODY_ECU_ARTIFACTS_DIR}/renode
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${BODY_ECU_FIRMWARE_ARTIFACTS}
+        ${BODY_ECU_ARTIFACTS_DIR}/firmware
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${BODY_ECU_RENODE_RESC_FILES}
+        ${BODY_ECU_ARTIFACTS_DIR}/renode
+    DEPENDS ${BODY_ECU_ARTIFACT_DEPENDENCY_TARGET}
+    COMMENT "Copying body-ecu firmware and Renode scripts to artifacts/"
+    VERBATIM
+)
