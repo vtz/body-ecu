@@ -8,6 +8,7 @@
 | **POSIX MCU (dev)** | `cmake -B build/posix-mcu -S platforms/posix-mcu` | None (pthreads) | Body services + SOME/IP server on `0.0.0.0:30490` |
 | **POSIX MPU (dev)** | `cmake -B build/posix-mpu -S platforms/posix-mpu` | None (pthreads) | SomeIpKuksaBridge + CloudGatewayClient, SOME/IP client |
 | **AutoSD (MPU)** | `cmake -B build/autosd -S platforms/autosd` | Linux (AutoSD) | Kuksa + NATS adapters, production MPU target |
+| **AutoSD (MPU host-like image)** | `packaging/build-rpm.sh mpu-hostlike aarch64` + AIB compose | Linux (AutoSD) | POSIX-MPU runtime model (CLI + SOME/IP + stub cloud) installed via local RPM repo |
 | native_sim | `west build -b native_sim app` | Zephyr (POSIX) | Zephyr kernel simulation |
 | NUCLEO-H755ZI-Q | `west build -b nucleo_h755zi_q/stm32h755xx/m7 app` | Zephyr | M7 core, Ethernet + CAN-FD |
 
@@ -110,6 +111,8 @@ sudo systemctl edit body-ecu-hpc  # or edit /etc/body-ecu/body-ecu-hpc.env
 | `packaging/body-ecu-hpc.spec` | RPM spec |
 | `packaging/body-ecu-hpc.service` | systemd unit |
 | `packaging/body-ecu-hpc.env` | Environment file (MCU host config) |
+| `packaging/body-ecu-mpu-hostlike.spec` | Host-like MPU RPM spec (POSIX MPU build) |
+| `packaging/aib/body-ecu-mpu-hostlike.aib.yml` | AIB image manifest consuming local RPM repo |
 
 ## Cross-Processor Communication
 

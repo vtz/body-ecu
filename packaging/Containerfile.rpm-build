@@ -2,6 +2,7 @@ FROM fedora:42
 
 RUN dnf install -y --setopt=install_weak_deps=False \
         rpm-build rpmdevtools \
+        createrepo_c \
         cmake gcc-c++ git-core \
         systemd-rpm-macros systemd-devel \
         grpc-devel grpc-plugins \
