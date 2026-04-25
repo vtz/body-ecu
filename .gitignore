@@ -18,3 +18,5 @@ coverage.xml
 notes.md
 
 /build_h755/
+/build_*/
+/backup/

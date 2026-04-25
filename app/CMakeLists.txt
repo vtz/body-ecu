@@ -85,11 +85,15 @@ target_link_libraries(app PRIVATE
 
 # Stage firmware + Renode scripts in one place for CI/packaging.
 set(BODY_ECU_ARTIFACTS_DIR ${CMAKE_BINARY_DIR}/artifacts)
-set(BODY_ECU_FIRMWARE_ARTIFACTS
-    ${CMAKE_BINARY_DIR}/zephyr/zephyr.elf
-    ${CMAKE_BINARY_DIR}/zephyr/zephyr.hex
-    ${CMAKE_BINARY_DIR}/zephyr/zephyr.bin
-)
+
+set(BODY_ECU_FIRMWARE_ARTIFACTS ${CMAKE_BINARY_DIR}/zephyr/zephyr.elf)
+if(CONFIG_BUILD_OUTPUT_HEX)
+    list(APPEND BODY_ECU_FIRMWARE_ARTIFACTS ${CMAKE_BINARY_DIR}/zephyr/zephyr.hex)
+endif()
+if(CONFIG_BUILD_OUTPUT_BIN)
+    list(APPEND BODY_ECU_FIRMWARE_ARTIFACTS ${CMAKE_BINARY_DIR}/zephyr/zephyr.bin)
+endif()
+
 set(BODY_ECU_RENODE_RESC_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/../renode/body_ecu.resc
     ${CMAKE_CURRENT_SOURCE_DIR}/../renode/body_ecu_vnet.resc
