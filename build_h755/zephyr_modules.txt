@@ -1,5 +1,0 @@
-"someip-stack":"/Users/vzein/Projects/spikes/modules/opensomeip":"/Users/vzein/Projects/spikes/modules/opensomeip/zephyr"
-"cmsis":"/Users/vzein/Projects/spikes/modules/hal/cmsis":"${ZEPHYR_CMSIS_CMAKE_DIR}"
-"cmsis_6":"/Users/vzein/Projects/spikes/modules/hal/cmsis_6":"${ZEPHYR_CMSIS_6_CMAKE_DIR}"
-"hal_stm32":"/Users/vzein/Projects/spikes/modules/hal/stm32":"/Users/vzein/Projects/spikes/modules/hal/stm32"
-"segger":"/Users/vzein/Projects/spikes/modules/debug/segger":"${ZEPHYR_SEGGER_CMAKE_DIR}"
