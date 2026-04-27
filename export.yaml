@@ -12,7 +12,6 @@ export:
       probe_rs_path: "/opt/homebrew/bin/probe-rs"
       chip: "STM32H755ZI"
       protocol: "swd"
-      connect_under_reset: true
   console:
     type: jumpstarter_driver_pyserial.driver.PySerial
     config:
