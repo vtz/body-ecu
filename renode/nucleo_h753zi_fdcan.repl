@@ -1,0 +1,6 @@
+// Stub CAN CCU (clock calibration unit) as mapped memory.
+// The base platform already provides fdcan1 (CAN.MCAN @ 0x4000A000)
+// and canMessageRAM, but the CCU at 0x4000A800 is missing.
+
+fdcan_ccu: Memory.MappedMemory @ sysbus 0x4000A800
+    size: 0x400

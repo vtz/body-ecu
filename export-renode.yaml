@@ -1,0 +1,51 @@
+apiVersion: jumpstarter.dev/v1alpha1
+kind: ExporterConfig
+metadata:
+  name: nucleo-board-renode
+  namespace: default
+export:
+  ecu:
+    type: jumpstarter_driver_renode.driver.Renode
+    config:
+      platform: "platforms/boards/nucleo_h753zi.repl"
+      uart: "sysbus.usart3"
+      allow_raw_monitor: true
+      extra_commands:
+        # Load FDCAN CCU stub so CAN driver init doesn't hang
+        - "machine LoadPlatformDescription @renode/nucleo_h753zi_fdcan.repl"
+        # Suppress noisy warnings from incomplete peripheral models
+        - "logLevel 3 sysbus.rcc"
+        - "logLevel 3 sysbus.nvic"
+        - "logLevel 3 sysbus.lpuart1"
+        - "logLevel 3 sysbus.syscfg"
+        - "logLevel 3 sysbus.ethernet"
+        - "logLevel 3 sysbus.adcM1S2"
+        - "logLevel 3 sysbus.fdcan1"
+        - "logLevel 3 sysbus.exti"
+        - "logLevel -1 sysbus"
+        - "logLevel 3 cpu"
+        # Break adc_stm32_init ADRDY polling loop
+        - "cpu AddHook 0x8010f74 \"from Antmicro.Renode.Peripherals.CPU import RegisterValue; self.SetRegisterUnsafe(3, RegisterValue.Create(1, 32))\""
+        # Network: bridge Renode Ethernet to host TAP
+        - "emulation CreateSwitch \"switch0\""
+        - "connector Connect sysbus.ethernet switch0"
+        - "emulation CreateTap \"tap0\" \"tap\""
+        - "connector Connect host.tap switch0"
+        - "python \"import os; os.system('sudo ip link set tap0 up && sudo ip addr add 192.168.100.1/24 dev tap0')\""
+
+  someip:
+    type: jumpstarter_driver_someip.driver.SomeIp
+    config:
+      host: "192.168.100.1"
+      port: 30490
+      transport_mode: UDP
+      remote_host: "192.168.100.10"
+
+  flasher:
+    ref: "ecu.flasher"
+
+  serial:
+    ref: "ecu.console"
+
+  power:
+    ref: "ecu.power"

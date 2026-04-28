@@ -1,0 +1,256 @@
+<mxfile host="65bd71144e">
+    <diagram name="Body ECU Architecture" id="body-ecu-arch">
+        <mxGraphModel grid="0" page="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" pageScale="1" pageWidth="1600" pageHeight="900" background="#FFFFFF" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="mcu-box" value="MCU — Zephyr RTOS (NUCLEO-H755ZI-Q)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#0066CC;fontSize=14;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;verticalAlign=top;spacingTop=8;dashed=1;dashPattern=8 8;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="60" width="700" height="780" as="geometry"/>
+                </mxCell>
+                <mxCell id="mpu-box" value="MPU — Linux (Red Hat AutoSD)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#63993D;fontSize=14;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;verticalAlign=top;spacingTop=8;dashed=1;dashPattern=8 8;" parent="1" vertex="1">
+                    <mxGeometry x="860" y="60" width="700" height="780" as="geometry"/>
+                </mxCell>
+                <mxCell id="body-domain" value="Body Domain" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E0E0E0;strokeColor=#707070;fontSize=13;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;verticalAlign=top;spacingTop=6;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="110" width="640" height="130" as="geometry"/>
+                </mxCell>
+                <mxCell id="lighting" value="Lighting" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=11;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="90" y="150" width="110" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="doorlock" value="Door Lock" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=11;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="215" y="150" width="110" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="vehmode" value="Vehicle Mode" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=11;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="340" y="150" width="110" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="speedsim" value="Speed&lt;br&gt;Simulator" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=11;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="465" y="150" width="110" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="ignition" value="Ignition" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=11;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="590" y="150" width="100" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="signalbus" value="Local Signal Bus" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E0F0FF;strokeColor=#0066CC;fontSize=10;fontStyle=2;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="90" y="200" width="600" height="24" as="geometry"/>
+                </mxCell>
+                <mxCell id="ports" value="Ports (Interfaces)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#0066CC;strokeColor=none;fontSize=12;fontStyle=1;fontFamily=Red Hat Text;fontColor=#FFFFFF;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="260" width="640" height="36" as="geometry"/>
+                </mxCell>
+                <mxCell id="platform-svc" value="Platform Services" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E0E0E0;strokeColor=#707070;fontSize=13;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;verticalAlign=top;spacingTop=6;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="316" width="640" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="cangw" value="CAN Gateway&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;SOME/IP ↔ CAN&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=11;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="90" y="350" width="140" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="diag" value="Diagnostics&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;UDS / DoIP / DoCAN&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=11;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="250" y="350" width="150" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="someip-srv" value="SOME/IP Server&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;OpenSOME/IP&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=11;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="420" y="350" width="140" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="lifecycle" value="Lifecycle&lt;br&gt;Manager" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=11;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="580" y="350" width="110" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="sys-adapt" value="System Adapters" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E0E0E0;strokeColor=#707070;fontSize=12;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;verticalAlign=top;spacingTop=6;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="436" width="640" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="lightsys" value="Lighting&lt;br&gt;System" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=10;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="90" y="468" width="90" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="doorlocksys" value="DoorLock&lt;br&gt;System" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=10;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="195" y="468" width="90" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="vehmodesys" value="VehicleMode&lt;br&gt;System" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=10;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="300" y="468" width="90" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="speedsys" value="Speed&lt;br&gt;System" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=10;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="405" y="468" width="90" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="diagsys" value="Diagnostics&lt;br&gt;System" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=10;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="510" y="468" width="90" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="cangwsys" value="CanGW&lt;br&gt;System" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=10;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="615" y="468" width="80" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="zephyr-adapt" value="Zephyr HAL Adapters" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E0E0E0;strokeColor=#707070;fontSize=12;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;verticalAlign=top;spacingTop=6;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="546" width="640" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="gpio-adp" value="GPIO" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=10;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="90" y="580" width="80" height="36" as="geometry"/>
+                </mxCell>
+                <mxCell id="can-adp" value="CAN-FD" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=10;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="185" y="580" width="80" height="36" as="geometry"/>
+                </mxCell>
+                <mxCell id="btn-adp" value="Button" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=10;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="280" y="580" width="80" height="36" as="geometry"/>
+                </mxCell>
+                <mxCell id="adc-adp" value="ADC" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=10;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="375" y="580" width="80" height="36" as="geometry"/>
+                </mxCell>
+                <mxCell id="timer-adp" value="Timer" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=10;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="470" y="580" width="80" height="36" as="geometry"/>
+                </mxCell>
+                <mxCell id="eth-adp" value="Ethernet" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=10;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="565" y="580" width="80" height="36" as="geometry"/>
+                </mxCell>
+                <mxCell id="openbsw" value="OpenBSW (Lifecycle / Async)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E0F0FF;strokeColor=#0066CC;fontSize=11;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="656" width="310" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="zephyr-os" value="Zephyr RTOS" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E0F0FF;strokeColor=#0066CC;fontSize=11;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="400" y="656" width="310" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="hw" value="Hardware: NUCLEO-H755ZI-Q / Renode" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#0066CC;strokeColor=none;fontSize=11;fontStyle=1;fontFamily=Red Hat Text;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="716" width="640" height="36" as="geometry"/>
+                </mxCell>
+                <mxCell id="someip-bridge" value="SOME/IP ↔ Kuksa Bridge&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;signal_bridge.yaml mapping&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E0F0FF;strokeColor=#0066CC;fontSize=12;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="180" width="260" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="kuksa" value="Kuksa Databroker&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;Eclipse (pre-built binary)&lt;br&gt;Vehicle Signal Specification (VSS)&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#D1F1BB;strokeColor=#63993D;fontSize=12;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="310" width="260" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="cloudgw" value="Cloud Gateway Client" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E0E0E0;strokeColor=#707070;fontSize=12;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="450" width="260" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="mpu-adapt" value="MPU Adapters" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E0E0E0;strokeColor=#707070;fontSize=12;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;verticalAlign=top;spacingTop=6;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="560" width="620" height="100" as="geometry"/>
+                </mxCell>
+                <mxCell id="kuksa-adp" value="Kuksa gRPC&lt;br&gt;Adapter" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=10;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="920" y="596" width="120" height="46" as="geometry"/>
+                </mxCell>
+                <mxCell id="nats-adp" value="NATS Cloud&lt;br&gt;Transport" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=10;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="1060" y="596" width="120" height="46" as="geometry"/>
+                </mxCell>
+                <mxCell id="someip-cli" value="SOME/IP Client&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;OpenSOME/IP&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=10;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="1200" y="596" width="120" height="46" as="geometry"/>
+                </mxCell>
+                <mxCell id="systemd-adp" value="Systemd&lt;br&gt;Lifecycle" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=10;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="1340" y="596" width="120" height="46" as="geometry"/>
+                </mxCell>
+                <mxCell id="linux-os" value="Linux (Red Hat AutoSD)" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E9F7DF;strokeColor=#63993D;fontSize=11;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="900" y="690" width="620" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="config" value="Config Loader&lt;br&gt;&lt;font style=&quot;font-size:9px&quot;&gt;services.yaml / signal_bridge.yaml&lt;br&gt;can_gateway.yaml&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=11;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="1240" y="180" width="260" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="cloud" value="Cloud (NATS)" style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#E0E0E0;strokeColor=#707070;fontSize=12;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="1240" y="400" width="220" height="120" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-someip" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=3;strokeColor=#F0561D;" parent="1" source="someip-srv" target="someip-bridge" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-someip-lbl" value="SOME/IP&lt;br&gt;(Ethernet)" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=11;fontStyle=1;fontFamily=Red Hat Text;fontColor=#F0561D;" parent="e-someip" vertex="1" connectable="0">
+                    <mxGeometry x="-0.1" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e-bridge-kuksa" style="rounded=0;strokeWidth=2;strokeColor=#63993D;" parent="1" source="someip-bridge" target="kuksa" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-bridge-kuksa-lbl" value="gRPC" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontFamily=Red Hat Text;fontColor=#63993D;" parent="e-bridge-kuksa" vertex="1" connectable="0">
+                    <mxGeometry x="-0.1" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e-kuksa-cgw" style="rounded=0;strokeWidth=2;strokeColor=#707070;" parent="1" source="kuksa" target="cloudgw" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-cgw-cloud" style="rounded=0;strokeWidth=2;strokeColor=#5E40BE;dashed=1;" parent="1" source="cloudgw" target="cloud" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-cgw-cloud-lbl" value="NATS" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=10;fontFamily=Red Hat Text;fontColor=#5E40BE;" parent="e-cgw-cloud" vertex="1" connectable="0">
+                    <mxGeometry x="-0.1" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e-cfg-bridge" style="rounded=0;strokeWidth=1;strokeColor=#707070;dashed=1;dashPattern=2 4;" parent="1" source="config" target="someip-bridge" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+    <diagram name="Component Allocation" id="alloc-diagram">
+        <mxGraphModel dx="1121" dy="678" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1200" pageHeight="600" background="#FFFFFF" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="a-title" value="Body ECU — Component Allocation" style="text;html=1;fontSize=18;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;align=left;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="15" width="500" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-cloud" value="Cloud" style="shape=cloud;whiteSpace=wrap;html=1;fillColor=#E0E0E0;strokeColor=#707070;fontSize=18;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="795" y="45" width="160" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-mcu" value="" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#0066CC;dashed=1;dashPattern=8 8;fontSize=18;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="90" width="440" height="411" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-mcu-hdr" value="MCU" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#0066CC;strokeColor=none;fontSize=18;fontStyle=1;fontFamily=Red Hat Text;fontColor=#FFFFFF;verticalAlign=middle;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="90" width="440" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-body-grp" value="Body Applications" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E0E0E0;strokeColor=#707070;fontSize=18;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;verticalAlign=top;spacingTop=6;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="140" width="400" height="90" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-lighting" value="Lighting" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=18;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="75" y="172" width="90" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-doorlock" value="Door Lock" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=18;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="178" y="172" width="90" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-vehmode" value="Vehicle Mode" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=18;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="281" y="172" width="90" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-ignition" value="Ignition" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=18;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="384" y="172" width="62" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-someip-srv" value="OpenSOME/IP" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#0066CC;strokeColor=none;fontSize=18;fontStyle=1;fontFamily=Red Hat Text;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="250" width="400" height="44" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-openbsw" value="OpenBSW" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#0066CC;strokeColor=none;fontSize=18;fontStyle=1;fontFamily=Red Hat Text;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="314" width="400" height="44" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-zephyr" value="Zephyr RTOS" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#0066CC;strokeColor=none;fontSize=18;fontStyle=1;fontFamily=Red Hat Text;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="378" width="400" height="44" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-hw" value="NUCLEO-H755ZI-Q (STM32H755)&amp;nbsp;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E0E0E0;strokeColor=#707070;fontSize=18;fontFamily=Red Hat Text;fontColor=#151515;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="442" width="400" height="36" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-sep1" value="" style="line;strokeWidth=1;strokeColor=#FFFFFF;fillColor=none;fontSize=18;" vertex="1" parent="1">
+                    <mxGeometry x="60" y="294" width="400" height="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-sep2" value="" style="line;strokeWidth=1;strokeColor=#FFFFFF;fillColor=none;fontSize=18;" vertex="1" parent="1">
+                    <mxGeometry x="60" y="358" width="400" height="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="Q9FOLv_1vmWt0TlsIIb7-2" value="" style="edgeStyle=none;html=1;fontColor=#000000;fontSize=18;" edge="1" parent="1" source="a-hpc" target="a-mcu">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-hpc" value="z" style="rounded=0;whiteSpace=wrap;html=1;fillColor=none;strokeColor=#63993D;dashed=1;dashPattern=8 8;fontSize=18;" vertex="1" parent="1">
+                    <mxGeometry x="587" y="140" width="440" height="302" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-hpc-hdr" value="HPC" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#63993D;strokeColor=none;fontSize=18;fontStyle=1;fontFamily=Red Hat Text;fontColor=#FFFFFF;verticalAlign=middle;" vertex="1" parent="1">
+                    <mxGeometry x="587" y="140" width="440" height="32" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-cloud-conn" value="Cloud Connectors&lt;br style=&quot;font-size: 18px;&quot;&gt;&lt;font style=&quot;font-size: 18px;&quot;&gt;NATS / MQTT&lt;/font&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#E0E0E0;strokeColor=#707070;fontSize=18;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;" vertex="1" parent="1">
+                    <mxGeometry x="607" y="190" width="400" height="44" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-hpc-apps" value="Body Applications" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#FFFFFF;strokeColor=#707070;fontSize=18;fontStyle=1;fontFamily=Red Hat Text;fontColor=#151515;dashed=1;dashPattern=8 8;" vertex="1" parent="1">
+                    <mxGeometry x="607" y="254" width="400" height="44" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-someip-cli-layer" value="OpenSOME/IP" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#0066CC;strokeColor=none;fontSize=18;fontStyle=1;fontFamily=Red Hat Text;fontColor=#FFFFFF;" parent="1" vertex="1">
+                    <mxGeometry x="607" y="318" width="400" height="44" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-autosd" value="Red Hat AutoSD" style="rounded=0;whiteSpace=wrap;html=1;fillColor=#e51400;strokeColor=#B20000;fontSize=18;fontStyle=1;fontFamily=Red Hat Text;fontColor=#ffffff;" vertex="1" parent="1">
+                    <mxGeometry x="607" y="382" width="400" height="36" as="geometry"/>
+                </mxCell>
+                <mxCell id="a-someip-edge" style="edgeStyle=orthogonalEdgeStyle;rounded=0;strokeWidth=3;strokeColor=#F0561D;fontSize=18;" parent="1" source="a-someip-srv" target="a-someip-cli-layer" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="538" y="272"/>
+                            <mxPoint x="538" y="336"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="a-someip-lbl" value="SOME/IP&amp;nbsp;" style="edgeLabel;html=1;align=center;verticalAlign=middle;resizable=0;points=[];fontSize=18;fontStyle=1;fontFamily=Red Hat Text;fontColor=#000000;labelBackgroundColor=none;" parent="a-someip-edge" vertex="1" connectable="0">
+                    <mxGeometry x="-0.05" relative="1" as="geometry">
+                        <mxPoint x="-1" y="58" as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
