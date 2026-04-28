@@ -7,6 +7,7 @@
 #include "ports/IGpioPort.h"
 #include "ports/IModeObserver.h"
 #include "ports/ISomeIpService.h"
+#include "someip_service_ids.h"
 
 namespace body_ecu::body {
 
@@ -18,11 +19,11 @@ enum class LightId : uint8_t {
 static constexpr size_t kLightCount = 3;
 
 struct LightingConfig {
-    uint16_t service_id{0x1000};
-    uint16_t set_light_state_method{0x0001};
-    uint16_t get_light_status_method{0x0002};
-    uint16_t light_status_changed_event{0x8001};
-    uint16_t eventgroup_id{0x0001};
+    uint16_t service_id{someip::lighting::kServiceId};
+    uint16_t set_light_state_method{someip::lighting::method::kSetLightState};
+    uint16_t get_light_status_method{someip::lighting::method::kGetLightStatus};
+    uint16_t light_status_changed_event{someip::lighting::event::kLightStatusChanged};
+    uint16_t eventgroup_id{someip::lighting::eventgroup::kLightingEvents};
     std::array<uint32_t, kLightCount> gpio_pins{0, 1, 2};
     uint16_t diag_did{0xF100};
 };

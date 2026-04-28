@@ -60,6 +60,9 @@ target_link_libraries(osHooks PRIVATE freeRtos)
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/opensomeip.cmake)
 
+# SOME/IP code generation from services.yaml
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/someip_codegen.cmake)
+
 add_subdirectory(${LIBS_ROOT}/platform/ports ${CMAKE_CURRENT_BINARY_DIR}/ports)
 
 add_subdirectory(${LIBS_ROOT}/body/lighting ${CMAKE_CURRENT_BINARY_DIR}/lighting)

@@ -6,7 +6,7 @@ if(ZEPHYR_BASE)
 else()
     add_library(speed_simulator STATIC src/SpeedSimulator.cpp)
     target_include_directories(speed_simulator PUBLIC include)
-    target_link_libraries(speed_simulator PUBLIC ports)
+    target_link_libraries(speed_simulator PUBLIC ports someip_ids)
 endif()
 
 if(BUILD_TESTS)

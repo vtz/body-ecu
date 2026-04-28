@@ -63,6 +63,9 @@ target_link_libraries(osHooks PRIVATE freeRtos)
 # OpenSOME/IP stack
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/opensomeip.cmake)
 
+# SOME/IP code generation from services.yaml
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/someip_codegen.cmake)
+
 # Port interfaces (header-only)
 add_subdirectory(${LIBS_ROOT}/platform/ports ${CMAKE_CURRENT_BINARY_DIR}/ports)
 

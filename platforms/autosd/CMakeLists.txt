@@ -14,6 +14,9 @@ set(LIBS_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../libs)
 # OpenSOME/IP stack (real UDP transport)
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/opensomeip.cmake)
 
+# SOME/IP code generation from services.yaml
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/someip_codegen.cmake)
+
 # --- Real adapter dependencies (Kuksa gRPC + nats.c) ---
 if(BODY_ECU_REAL_ADAPTERS)
     include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/kuksa_proto.cmake)

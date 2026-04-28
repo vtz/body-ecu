@@ -6,7 +6,7 @@ if(ZEPHYR_BASE)
 else()
     add_library(lighting STATIC src/LightingController.cpp)
     target_include_directories(lighting PUBLIC include)
-    target_link_libraries(lighting PUBLIC ports)
+    target_link_libraries(lighting PUBLIC ports someip_ids)
 endif()
 
 if(BUILD_TESTS)
