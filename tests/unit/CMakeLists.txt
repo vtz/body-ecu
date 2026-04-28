@@ -34,6 +34,9 @@ include(GoogleTest)
 set(LIBS_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../libs)
 set(OPENBSW_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../../openbsw CACHE PATH "OpenBSW root")
 
+# SOME/IP code generation from services.yaml
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/someip_codegen.cmake)
+
 # --- OpenBSW lifecycle (directly, without full Filelists.cmake) ---
 # Minimal async mock for unit tests
 add_library(asyncImpl INTERFACE)

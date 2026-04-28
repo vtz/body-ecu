@@ -13,6 +13,7 @@
 #include "linux_adapters/StubCloudTransport.h"
 
 #include "cli.h"
+#include "someip_service_ids.h"
 
 using namespace body_ecu;
 
@@ -50,40 +51,40 @@ int main(int argc, char* argv[])
     lock_event.signal_path =
         "Vehicle.Cabin.Door.Row1.DriverSide.IsLocked";
     lock_event.direction = adapters::BridgeDirection::EventToSignal;
-    lock_event.someip_service_id = 0x1001;
-    lock_event.someip_method_or_event_id = 0x8001;
-    lock_event.someip_eventgroup_id = 0x0001;
+    lock_event.someip_service_id = body_ecu::someip::door_lock::kServiceId;
+    lock_event.someip_method_or_event_id = body_ecu::someip::door_lock::event::kLockStateChanged;
+    lock_event.someip_eventgroup_id = body_ecu::someip::door_lock::eventgroup::kDoorEvents;
     bridge.addMapping(lock_event);
 
     adapters::BridgeMapping lock_cmd;
     lock_cmd.signal_path = "Vehicle.Command.Door.Lock";
     lock_cmd.direction = adapters::BridgeDirection::SignalToMethod;
-    lock_cmd.someip_service_id = 0x1001;
-    lock_cmd.someip_method_or_event_id = 0x0001;
+    lock_cmd.someip_service_id = body_ecu::someip::door_lock::kServiceId;
+    lock_cmd.someip_method_or_event_id = body_ecu::someip::door_lock::method::kLock;
     bridge.addMapping(lock_cmd);
 
     adapters::BridgeMapping speed_event;
     speed_event.signal_path = "Vehicle.Speed";
     speed_event.direction = adapters::BridgeDirection::EventToSignal;
-    speed_event.someip_service_id = 0x1003;
-    speed_event.someip_method_or_event_id = 0x8001;
-    speed_event.someip_eventgroup_id = 0x0001;
+    speed_event.someip_service_id = body_ecu::someip::speed_sensor::kServiceId;
+    speed_event.someip_method_or_event_id = body_ecu::someip::speed_sensor::event::kSpeedChanged;
+    speed_event.someip_eventgroup_id = body_ecu::someip::speed_sensor::eventgroup::kSpeedEvents;
     bridge.addMapping(speed_event);
 
     adapters::BridgeMapping mode_event;
     mode_event.signal_path = "Vehicle.Mode";
     mode_event.direction = adapters::BridgeDirection::EventToSignal;
-    mode_event.someip_service_id = 0x1002;
-    mode_event.someip_method_or_event_id = 0x8001;
-    mode_event.someip_eventgroup_id = 0x0001;
+    mode_event.someip_service_id = body_ecu::someip::vehicle_mode::kServiceId;
+    mode_event.someip_method_or_event_id = body_ecu::someip::vehicle_mode::field::kModeNotifier;
+    mode_event.someip_eventgroup_id = body_ecu::someip::vehicle_mode::eventgroup::kModeEvents;
     bridge.addMapping(mode_event);
 
     adapters::BridgeMapping light_event;
     light_event.signal_path = "Vehicle.Lights.Status";
     light_event.direction = adapters::BridgeDirection::EventToSignal;
-    light_event.someip_service_id = 0x1000;
-    light_event.someip_method_or_event_id = 0x8001;
-    light_event.someip_eventgroup_id = 0x0001;
+    light_event.someip_service_id = body_ecu::someip::lighting::kServiceId;
+    light_event.someip_method_or_event_id = body_ecu::someip::lighting::event::kLightStatusChanged;
+    light_event.someip_eventgroup_id = body_ecu::someip::lighting::eventgroup::kLightingEvents;
     bridge.addMapping(light_event);
 
     platform::CloudGatewayConfig gw_config;

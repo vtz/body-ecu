@@ -19,15 +19,15 @@ Cli::~Cli() {
 }
 
 void Cli::init() {
-    registerResponseHandler(config_.mode_service_id, config_.mode_get_method);
-    registerResponseHandler(config_.mode_service_id, config_.mode_set_method);
-    registerResponseHandler(config_.lighting_service_id, config_.lighting_set_method);
-    registerResponseHandler(config_.lighting_service_id, config_.lighting_get_method);
-    registerResponseHandler(config_.door_service_id, config_.door_lock_method);
-    registerResponseHandler(config_.door_service_id, config_.door_unlock_method);
-    registerResponseHandler(config_.door_service_id, config_.door_get_method);
-    registerResponseHandler(config_.speed_service_id, config_.speed_get_method);
-    registerResponseHandler(config_.speed_service_id, config_.speed_set_method);
+    registerResponseHandler(config_.vehicle_mode_service_id, config_.vehicle_mode_mode_getter);
+    registerResponseHandler(config_.vehicle_mode_service_id, config_.vehicle_mode_mode_setter);
+    registerResponseHandler(config_.lighting_service_id, config_.lighting_set_light_state_method);
+    registerResponseHandler(config_.lighting_service_id, config_.lighting_get_light_status_method);
+    registerResponseHandler(config_.door_lock_service_id, config_.door_lock_lock_method);
+    registerResponseHandler(config_.door_lock_service_id, config_.door_lock_unlock_method);
+    registerResponseHandler(config_.door_lock_service_id, config_.door_lock_get_status_method);
+    registerResponseHandler(config_.speed_sensor_service_id, config_.speed_sensor_get_speed_method);
+    registerResponseHandler(config_.speed_sensor_service_id, config_.speed_sensor_set_speed_method);
 }
 
 void Cli::registerResponseHandler(uint16_t service_id, uint16_t method_id) {
@@ -156,8 +156,8 @@ void Cli::cmdHelp() {
 
 void Cli::cmdMode(const char* args) {
     if (*args == '\0') {
-        auto resp = sendRequest(config_.mode_service_id,
-                                config_.mode_get_method);
+        auto resp = sendRequest(config_.vehicle_mode_service_id,
+                                config_.vehicle_mode_mode_getter);
         if (resp.return_code == 0 && !resp.payload.empty()) {
             std::printf("Vehicle mode: %s\n", modeToString(resp.payload[0]));
         } else if (resp.return_code == 0xFF) {
@@ -182,8 +182,8 @@ void Cli::cmdMode(const char* args) {
         return;
     }
 
-    auto resp = sendRequest(config_.mode_service_id,
-                            config_.mode_set_method, {target});
+    auto resp = sendRequest(config_.vehicle_mode_service_id,
+                            config_.vehicle_mode_mode_setter, {target});
     if (resp.return_code == 0) {
         std::printf("Mode set to: %s\n", modeToString(target));
     } else if (resp.return_code == 0xFF) {
@@ -197,7 +197,7 @@ void Cli::cmdMode(const char* args) {
 void Cli::cmdLight(const char* args) {
     if (*args == '\0') {
         auto resp = sendRequest(config_.lighting_service_id,
-                                config_.lighting_get_method);
+                                config_.lighting_get_light_status_method);
         if (resp.return_code == 0 && resp.payload.size() >= 3) {
             std::printf("Lights: headlight=%s, turn=%s, brake=%s\n",
                         resp.payload[0] ? "ON" : "OFF",
@@ -240,13 +240,13 @@ void Cli::cmdLight(const char* args) {
     if (light_id == 0xFE) {
         for (uint8_t i = 0; i < 3; ++i) {
             sendRequest(config_.lighting_service_id,
-                        config_.lighting_set_method,
+                        config_.lighting_set_light_state_method,
                         {i, on ? uint8_t(1) : uint8_t(0)});
         }
         std::printf("All lights %s\n", on ? "ON" : "OFF");
     } else {
         auto resp = sendRequest(config_.lighting_service_id,
-                                config_.lighting_set_method,
+                                config_.lighting_set_light_state_method,
                                 {light_id, on ? uint8_t(1) : uint8_t(0)});
         if (resp.return_code == 0) {
             std::printf("%s %s\n", lightIdToString(light_id),
@@ -261,8 +261,8 @@ void Cli::cmdLight(const char* args) {
 
 void Cli::cmdDoor(const char* args) {
     if (*args == '\0' || std::strcmp(args, "status") == 0) {
-        auto resp = sendRequest(config_.door_service_id,
-                                config_.door_get_method);
+        auto resp = sendRequest(config_.door_lock_service_id,
+                                config_.door_lock_get_status_method);
         if (resp.return_code == 0 && !resp.payload.empty()) {
             const char* states[] = {"Unlocked", "Locked", "Error"};
             uint8_t s = resp.payload[0];
@@ -277,16 +277,16 @@ void Cli::cmdDoor(const char* args) {
     }
 
     if (std::strcmp(args, "lock") == 0) {
-        auto resp = sendRequest(config_.door_service_id,
-                                config_.door_lock_method);
+        auto resp = sendRequest(config_.door_lock_service_id,
+                                config_.door_lock_lock_method);
         if (resp.return_code == 0xFF)
             std::printf("Timeout\n");
         else
             std::printf("Door %s\n",
                         resp.return_code == 0 ? "locked" : "lock FAILED");
     } else if (std::strcmp(args, "unlock") == 0) {
-        auto resp = sendRequest(config_.door_service_id,
-                                config_.door_unlock_method);
+        auto resp = sendRequest(config_.door_lock_service_id,
+                                config_.door_lock_unlock_method);
         if (resp.return_code == 0xFF)
             std::printf("Timeout\n");
         else
@@ -299,8 +299,8 @@ void Cli::cmdDoor(const char* args) {
 
 void Cli::cmdSpeed(const char* args) {
     if (*args == '\0') {
-        auto resp = sendRequest(config_.speed_service_id,
-                                config_.speed_get_method);
+        auto resp = sendRequest(config_.speed_sensor_service_id,
+                                config_.speed_sensor_get_speed_method);
         if (resp.return_code == 0 && resp.payload.size() >= 4) {
             std::printf("Speed: %.0f km/h\n",
                         static_cast<double>(deserializeFloat(resp.payload)));
@@ -314,8 +314,8 @@ void Cli::cmdSpeed(const char* args) {
 
     if (std::strcmp(args, "clear") == 0 || std::strcmp(args, "adc") == 0) {
         auto payload = serializeFloat(-1.0f);
-        auto resp = sendRequest(config_.speed_service_id,
-                                config_.speed_set_method, payload);
+        auto resp = sendRequest(config_.speed_sensor_service_id,
+                                config_.speed_sensor_set_speed_method, payload);
         if (resp.return_code == 0xFF)
             std::printf("Timeout\n");
         else
@@ -331,8 +331,8 @@ void Cli::cmdSpeed(const char* args) {
     }
 
     auto payload = serializeFloat(value);
-    auto resp = sendRequest(config_.speed_service_id,
-                            config_.speed_set_method, payload);
+    auto resp = sendRequest(config_.speed_sensor_service_id,
+                            config_.speed_sensor_set_speed_method, payload);
     if (resp.return_code == 0) {
         std::printf("Speed set to %.0f km/h\n", static_cast<double>(value));
     } else if (resp.return_code == 0xFF) {
@@ -345,16 +345,16 @@ void Cli::cmdSpeed(const char* args) {
 void Cli::cmdStatus() {
     std::printf("--- Vehicle Status ---\n");
 
-    auto mode_resp = sendRequest(config_.mode_service_id,
-                                 config_.mode_get_method);
+    auto mode_resp = sendRequest(config_.vehicle_mode_service_id,
+                                 config_.vehicle_mode_mode_getter);
     if (mode_resp.return_code == 0 && !mode_resp.payload.empty()) {
         std::printf("  Mode:      %s\n", modeToString(mode_resp.payload[0]));
     } else {
         std::printf("  Mode:      (unavailable)\n");
     }
 
-    auto speed_resp = sendRequest(config_.speed_service_id,
-                                  config_.speed_get_method);
+    auto speed_resp = sendRequest(config_.speed_sensor_service_id,
+                                  config_.speed_sensor_get_speed_method);
     if (speed_resp.return_code == 0 && speed_resp.payload.size() >= 4) {
         std::printf("  Speed:     %.0f km/h\n",
                     static_cast<double>(deserializeFloat(speed_resp.payload)));
@@ -363,7 +363,7 @@ void Cli::cmdStatus() {
     }
 
     auto light_resp = sendRequest(config_.lighting_service_id,
-                                  config_.lighting_get_method);
+                                  config_.lighting_get_light_status_method);
     if (light_resp.return_code == 0 && light_resp.payload.size() >= 3) {
         std::printf("  Headlight: %s\n",
                     light_resp.payload[0] ? "ON" : "OFF");
@@ -375,8 +375,8 @@ void Cli::cmdStatus() {
         std::printf("  Lights:    (unavailable)\n");
     }
 
-    auto door_resp = sendRequest(config_.door_service_id,
-                                 config_.door_get_method);
+    auto door_resp = sendRequest(config_.door_lock_service_id,
+                                 config_.door_lock_get_status_method);
     if (door_resp.return_code == 0 && !door_resp.payload.empty()) {
         const char* states[] = {"Unlocked", "Locked", "Error"};
         uint8_t s = door_resp.payload[0];

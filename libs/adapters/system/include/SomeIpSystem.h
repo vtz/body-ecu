@@ -65,7 +65,7 @@ struct SomeIpConfig {
 class SomeIpSystem : public lifecycle::SimpleLifecycleComponent
                    , public ports::ISomeIpService
 #ifdef HAS_OPENSOMEIP
-                   , public someip::transport::ITransportListener
+                   , public ::someip::transport::ITransportListener
 #endif
 {
 public:
@@ -99,11 +99,11 @@ public:
 
 #ifdef HAS_OPENSOMEIP
     // ITransportListener
-    void on_message_received(someip::MessagePtr message,
-                             const someip::transport::Endpoint& sender) override;
-    void on_connection_lost(const someip::transport::Endpoint& endpoint) override;
-    void on_connection_established(const someip::transport::Endpoint& endpoint) override;
-    void on_error(someip::Result error) override;
+    void on_message_received(::someip::MessagePtr message,
+                             const ::someip::transport::Endpoint& sender) override;
+    void on_connection_lost(const ::someip::transport::Endpoint& endpoint) override;
+    void on_connection_established(const ::someip::transport::Endpoint& endpoint) override;
+    void on_error(::someip::Result error) override;
 #endif
 
 private:
@@ -129,20 +129,20 @@ private:
     std::vector<ports::SomeIpMessage> pending_events_;
 
 #ifdef HAS_OPENSOMEIP
-    std::shared_ptr<someip::transport::UdpTransport> transport_;
-    std::set<someip::transport::Endpoint> known_clients_;
-    someip::transport::Endpoint server_endpoint_;
+    std::shared_ptr<::someip::transport::UdpTransport> transport_;
+    std::set<::someip::transport::Endpoint> known_clients_;
+    ::someip::transport::Endpoint server_endpoint_;
     bool is_server_{false};
 
-    std::unique_ptr<someip::sd::SdServer> sd_server_;
-    std::unique_ptr<someip::sd::SdClient> sd_client_;
+    std::unique_ptr<::someip::sd::SdServer> sd_server_;
+    std::unique_ptr<::someip::sd::SdClient> sd_client_;
 
     void initSd();
     void shutdownSd();
-    void onServiceFound(const std::vector<someip::sd::ServiceInstance>& services);
+    void onServiceFound(const std::vector<::someip::sd::ServiceInstance>& services);
 
-    static ports::SomeIpMessage fromSomeIp(const someip::Message& msg);
-    static someip::Message toSomeIp(const ports::SomeIpMessage& msg);
+    static ports::SomeIpMessage fromSomeIp(const ::someip::Message& msg);
+    static ::someip::Message toSomeIp(const ports::SomeIpMessage& msg);
 #endif
 };
 

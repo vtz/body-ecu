@@ -8,6 +8,7 @@
 #include "ports/IModeObserver.h"
 #include "ports/ISignalBus.h"
 #include "ports/ISomeIpService.h"
+#include "someip_service_ids.h"
 
 namespace body_ecu::body {
 
@@ -18,12 +19,12 @@ enum class LockState : uint8_t {
 };
 
 struct DoorLockConfig {
-    uint16_t service_id{0x1001};
-    uint16_t lock_method{0x0001};
-    uint16_t unlock_method{0x0002};
-    uint16_t get_status_method{0x0003};
-    uint16_t lock_state_changed_event{0x8001};
-    uint16_t eventgroup_id{0x0001};
+    uint16_t service_id{someip::door_lock::kServiceId};
+    uint16_t lock_method{someip::door_lock::method::kLock};
+    uint16_t unlock_method{someip::door_lock::method::kUnlock};
+    uint16_t get_status_method{someip::door_lock::method::kGetStatus};
+    uint16_t lock_state_changed_event{someip::door_lock::event::kLockStateChanged};
+    uint16_t eventgroup_id{someip::door_lock::eventgroup::kDoorEvents};
     uint32_t lock_gpio_pin{10};
     uint16_t diag_did{0xF101};
 

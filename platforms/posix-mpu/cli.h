@@ -6,27 +6,11 @@
 #include <thread>
 
 #include "ports/ISomeIpService.h"
+#include "someip_mpu_config.h"
 
 namespace body_ecu {
 
-struct CliConfig {
-    uint16_t mode_service_id{0x1002};
-    uint16_t mode_get_method{0x0001};
-    uint16_t mode_set_method{0x0002};
-
-    uint16_t lighting_service_id{0x1000};
-    uint16_t lighting_set_method{0x0001};
-    uint16_t lighting_get_method{0x0002};
-
-    uint16_t door_service_id{0x1001};
-    uint16_t door_lock_method{0x0001};
-    uint16_t door_unlock_method{0x0002};
-    uint16_t door_get_method{0x0003};
-
-    uint16_t speed_service_id{0x1003};
-    uint16_t speed_get_method{0x0001};
-    uint16_t speed_set_method{0x0002};
-};
+using CliConfig = someip::MpuClientConfig;
 
 class Cli {
 public:

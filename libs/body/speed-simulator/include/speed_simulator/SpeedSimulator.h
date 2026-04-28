@@ -9,15 +9,16 @@
 #include "ports/ISignalBus.h"
 #include "ports/ISomeIpService.h"
 #include "ports/ITimerService.h"
+#include "someip_service_ids.h"
 
 namespace body_ecu::body {
 
 struct SpeedSimulatorConfig {
-    uint16_t service_id{0x1003};
-    uint16_t get_speed_method{0x0001};
-    uint16_t set_speed_method{0x0002};
-    uint16_t speed_changed_event{0x8001};
-    uint16_t eventgroup_id{0x0001};
+    uint16_t service_id{someip::speed_sensor::kServiceId};
+    uint16_t get_speed_method{someip::speed_sensor::method::kGetSpeed};
+    uint16_t set_speed_method{someip::speed_sensor::method::kSetSpeed};
+    uint16_t speed_changed_event{someip::speed_sensor::event::kSpeedChanged};
+    uint16_t eventgroup_id{someip::speed_sensor::eventgroup::kSpeedEvents};
     uint8_t adc_channel{0};
     float max_speed_kmh{200.0f};
     int32_t adc_dead_zone{200};

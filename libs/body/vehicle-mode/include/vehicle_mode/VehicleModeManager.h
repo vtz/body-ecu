@@ -5,15 +5,16 @@
 
 #include "ports/IModeObserver.h"
 #include "ports/ISomeIpService.h"
+#include "someip_service_ids.h"
 
 namespace body_ecu::body {
 
 struct VehicleModeConfig {
-    uint16_t service_id{0x1002};
-    uint16_t getter_method{0x0001};
-    uint16_t setter_method{0x0002};
-    uint16_t notifier_event{0x8001};
-    uint16_t eventgroup_id{0x0001};
+    uint16_t service_id{someip::vehicle_mode::kServiceId};
+    uint16_t getter_method{someip::vehicle_mode::field::kModeGetter};
+    uint16_t setter_method{someip::vehicle_mode::field::kModeSetter};
+    uint16_t notifier_event{someip::vehicle_mode::field::kModeNotifier};
+    uint16_t eventgroup_id{someip::vehicle_mode::eventgroup::kModeEvents};
 };
 
 class VehicleModeManager {

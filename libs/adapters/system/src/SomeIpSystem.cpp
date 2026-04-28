@@ -22,12 +22,12 @@ void SomeIpSystem::init() {
 #ifdef HAS_OPENSOMEIP
     is_server_ = (config_.role == SomeIpRole::Server);
     if (is_server_) {
-        someip::transport::Endpoint local(config_.host, config_.port);
-        transport_ = std::make_shared<someip::transport::UdpTransport>(local);
+        ::someip::transport::Endpoint local(config_.host, config_.port);
+        transport_ = std::make_shared<::someip::transport::UdpTransport>(local);
     } else {
-        someip::transport::Endpoint local("0.0.0.0", 0);
-        transport_ = std::make_shared<someip::transport::UdpTransport>(local);
-        server_endpoint_ = someip::transport::Endpoint(config_.host, config_.port);
+        ::someip::transport::Endpoint local("0.0.0.0", 0);
+        transport_ = std::make_shared<::someip::transport::UdpTransport>(local);
+        server_endpoint_ = ::someip::transport::Endpoint(config_.host, config_.port);
     }
     transport_->set_listener(this);
     std::printf("[SOME/IP] Initialized (%s) %s:%u\n",
@@ -43,20 +43,20 @@ void SomeIpSystem::initSd() {
         std::printf("[SOME/IP-SD] Disabled by configuration\n");
         return;
     }
-    someip::sd::SdConfig sd_cfg;
+    ::someip::sd::SdConfig sd_cfg;
     sd_cfg.multicast_address = config_.sd_multicast;
     sd_cfg.multicast_port    = config_.sd_port;
     sd_cfg.unicast_address   = config_.host;
     sd_cfg.cyclic_offer      = std::chrono::milliseconds(config_.sd_offer_interval_ms);
 
     if (is_server_) {
-        sd_server_ = std::make_unique<someip::sd::SdServer>(sd_cfg);
+        sd_server_ = std::make_unique<::someip::sd::SdServer>(sd_cfg);
         if (!sd_server_->initialize()) {
             std::printf("[SOME/IP-SD] Failed to initialize SD server\n");
             return;
         }
 
-        someip::sd::ServiceInstance svc;
+        ::someip::sd::ServiceInstance svc;
         svc.service_id = 0x1001;
         svc.instance_id = 0x0001;
         svc.major_version = 1;
@@ -65,7 +65,7 @@ void SomeIpSystem::initSd() {
         sd_server_->offer_service(svc, endpoint);
 
         for (const auto& ev : events_) {
-            someip::sd::ServiceInstance ev_svc;
+            ::someip::sd::ServiceInstance ev_svc;
             ev_svc.service_id = ev.service_id;
             ev_svc.instance_id = 0x0001;
             ev_svc.major_version = 1;
@@ -77,14 +77,14 @@ void SomeIpSystem::initSd() {
         std::printf("[SOME/IP-SD] Server offering services on %s (multicast %s:%u)\n",
                     endpoint.c_str(), config_.sd_multicast.c_str(), config_.sd_port);
     } else {
-        sd_client_ = std::make_unique<someip::sd::SdClient>(sd_cfg);
+        sd_client_ = std::make_unique<::someip::sd::SdClient>(sd_cfg);
         if (!sd_client_->initialize()) {
             std::printf("[SOME/IP-SD] Failed to initialize SD client\n");
             return;
         }
 
         sd_client_->find_service(0x1001,
-            [this](const std::vector<someip::sd::ServiceInstance>& svcs) {
+            [this](const std::vector<::someip::sd::ServiceInstance>& svcs) {
                 onServiceFound(svcs);
             },
             std::chrono::milliseconds(10000));
@@ -106,12 +106,12 @@ void SomeIpSystem::shutdownSd() {
 }
 
 void SomeIpSystem::onServiceFound(
-    const std::vector<someip::sd::ServiceInstance>& services) {
+    const std::vector<::someip::sd::ServiceInstance>& services) {
     for (const auto& svc : services) {
         if (!svc.ip_address.empty() && svc.port != 0) {
             std::printf("[SOME/IP-SD] Discovered service 0x%04X at %s:%u\n",
                         svc.service_id, svc.ip_address.c_str(), svc.port);
-            server_endpoint_ = someip::transport::Endpoint(svc.ip_address, svc.port);
+            server_endpoint_ = ::someip::transport::Endpoint(svc.ip_address, svc.port);
 
             if (sd_client_) {
                 sd_client_->subscribe_eventgroup(svc.service_id, svc.instance_id, 0x0001);
@@ -127,7 +127,7 @@ void SomeIpSystem::run() {
     running_ = true;
 #ifdef HAS_OPENSOMEIP
     auto result = transport_->start();
-    if (result != someip::Result::SUCCESS) {
+    if (result != ::someip::Result::SUCCESS) {
         std::printf("[SOME/IP] Failed to start transport (error %d)\n",
                     static_cast<int>(result));
         return;
@@ -242,8 +242,8 @@ ports::SomeIpMessage SomeIpSystem::dispatch(
 #ifdef HAS_OPENSOMEIP
 
 void SomeIpSystem::on_message_received(
-    someip::MessagePtr message,
-    const someip::transport::Endpoint& sender) {
+    ::someip::MessagePtr message,
+    const ::someip::transport::Endpoint& sender) {
     if (!message) return;
 
     {
@@ -299,41 +299,41 @@ void SomeIpSystem::on_message_received(
 }
 
 void SomeIpSystem::on_connection_established(
-    const someip::transport::Endpoint& endpoint) {
+    const ::someip::transport::Endpoint& endpoint) {
     SOMEIP_LOG("[SOME/IP] Connection established: %s\n",
                endpoint.to_string().c_str());
 }
 
 void SomeIpSystem::on_connection_lost(
-    const someip::transport::Endpoint& endpoint) {
+    const ::someip::transport::Endpoint& endpoint) {
     SOMEIP_LOG("[SOME/IP] Connection lost: %s\n",
                endpoint.to_string().c_str());
     PlatformLockGuard lock(mutex_);
     known_clients_.erase(endpoint);
 }
 
-void SomeIpSystem::on_error(someip::Result error) {
+void SomeIpSystem::on_error(::someip::Result error) {
     SOMEIP_LOG("[SOME/IP] Transport error: %d\n", static_cast<int>(error));
 }
 
-ports::SomeIpMessage SomeIpSystem::fromSomeIp(const someip::Message& msg) {
+ports::SomeIpMessage SomeIpSystem::fromSomeIp(const ::someip::Message& msg) {
     ports::SomeIpMessage result;
     result.service_id = msg.get_service_id();
     result.method_id = msg.get_method_id();
     result.client_id = msg.get_client_id();
     result.session_id = msg.get_session_id();
     result.message_type = static_cast<uint8_t>(msg.get_message_type());
-    result.return_code = static_cast<uint8_t>(msg.get_return_code());
+    result.return_code  = static_cast<uint8_t>(msg.get_return_code());
     result.payload = msg.get_payload();
     return result;
 }
 
-someip::Message SomeIpSystem::toSomeIp(const ports::SomeIpMessage& msg) {
-    someip::MessageId msg_id(msg.service_id, msg.method_id);
-    someip::RequestId req_id(msg.client_id, msg.session_id);
-    auto type = static_cast<someip::MessageType>(msg.message_type);
-    auto rc = static_cast<someip::ReturnCode>(msg.return_code);
-    someip::Message result(msg_id, req_id, type, rc);
+::someip::Message SomeIpSystem::toSomeIp(const ports::SomeIpMessage& msg) {
+    ::someip::MessageId msg_id(msg.service_id, msg.method_id);
+    ::someip::RequestId req_id(msg.client_id, msg.session_id);
+    auto type = static_cast<::someip::MessageType>(msg.message_type);
+    auto rc = static_cast<::someip::ReturnCode>(msg.return_code);
+    ::someip::Message result(msg_id, req_id, type, rc);
     result.set_payload(msg.payload);
     return result;
 }
