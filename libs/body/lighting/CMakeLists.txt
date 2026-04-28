@@ -1,7 +1,7 @@
 if(ZEPHYR_BASE)
     zephyr_library_named(lighting)
     zephyr_library_sources(src/LightingController.cpp)
-    zephyr_library_link_libraries(ports)
+    zephyr_library_link_libraries(ports someip_ids)
     target_include_directories(lighting PUBLIC include)
 else()
     add_library(lighting STATIC src/LightingController.cpp)

@@ -1,7 +1,7 @@
 if(ZEPHYR_BASE)
     zephyr_library_named(door_lock)
     zephyr_library_sources(src/DoorLockController.cpp)
-    zephyr_library_link_libraries(ports)
+    zephyr_library_link_libraries(ports someip_ids)
     target_include_directories(door_lock PUBLIC include)
 else()
     add_library(door_lock STATIC src/DoorLockController.cpp)

@@ -1,7 +1,7 @@
 if(ZEPHYR_BASE)
     zephyr_library_named(vehicle_mode)
     zephyr_library_sources(src/VehicleModeManager.cpp)
-    zephyr_library_link_libraries(ports)
+    zephyr_library_link_libraries(ports someip_ids)
     target_include_directories(vehicle_mode PUBLIC include)
 else()
     add_library(vehicle_mode STATIC src/VehicleModeManager.cpp)

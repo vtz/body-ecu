@@ -1,7 +1,7 @@
 if(ZEPHYR_BASE)
     zephyr_library_named(speed_simulator)
     zephyr_library_sources(src/SpeedSimulator.cpp)
-    zephyr_library_link_libraries(ports)
+    zephyr_library_link_libraries(ports someip_ids)
     target_include_directories(speed_simulator PUBLIC include)
 else()
     add_library(speed_simulator STATIC src/SpeedSimulator.cpp)
