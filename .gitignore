@@ -21,3 +21,10 @@ notes.md
 /build_h755/
 /build_*/
 /backup/
+
+*.qcow2
+*.patch
+*.drawio
+/out_nucleo/
+/out_rpm/
+docs/architecture/body-ecu-architecture.png
