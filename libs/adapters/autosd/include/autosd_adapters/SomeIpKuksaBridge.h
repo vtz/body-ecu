@@ -9,13 +9,16 @@
 namespace body_ecu::adapters {
 
 enum class BridgeDirection { EventToSignal, SignalToMethod };
+enum class SignalDataType { Int32, Bool, Float, String, Bitmask, Packed2Bytes };
 
 struct BridgeMapping {
     std::string signal_path;
     BridgeDirection direction{BridgeDirection::EventToSignal};
+    SignalDataType datatype{SignalDataType::Int32};
     uint16_t someip_service_id{0};
     uint16_t someip_method_or_event_id{0};
     uint16_t someip_eventgroup_id{0};
+    uint16_t someip_false_method_id{0};
 };
 
 /// Bridges SOME/IP events/methods on the MCU with VSS signals in Kuksa

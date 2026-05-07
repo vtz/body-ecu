@@ -1,4 +1,5 @@
 build/
+.venv/
 core
 .DS_Store
 *.o

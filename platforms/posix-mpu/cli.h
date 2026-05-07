@@ -22,6 +22,10 @@ public:
     void stop();
     bool isRunning() const { return running_; }
 
+    void registerResponseHandler(uint16_t service_id, uint16_t method_id);
+    ports::SomeIpMessage sendRequest(uint16_t service_id, uint16_t method_id,
+                                     const std::vector<uint8_t>& payload = {});
+
 private:
     void run();
     void processCommand(const char* line);
@@ -32,10 +36,6 @@ private:
     void cmdDoor(const char* args);
     void cmdSpeed(const char* args);
     void cmdStatus();
-
-    void registerResponseHandler(uint16_t service_id, uint16_t method_id);
-    ports::SomeIpMessage sendRequest(uint16_t service_id, uint16_t method_id,
-                                     const std::vector<uint8_t>& payload = {});
 
     static std::vector<uint8_t> serializeFloat(float value);
     static float deserializeFloat(const std::vector<uint8_t>& data);

@@ -10,14 +10,23 @@ namespace body_ecu::platform {
 
 struct CloudGatewayConfig {
     std::string vin{"WVWZZZ3CZWE000001"};
+
     std::string subject_command_lock{"vehicles.{vin}.command.door.lock"};
-    std::string subject_command_response{
-        "vehicles.{vin}.command.door.response"};
+    std::string subject_command_response{"vehicles.{vin}.command.door.response"};
     std::string subject_state_locked{"vehicles.{vin}.state.door.locked"};
+    std::string subject_state_mode{"vehicles.{vin}.state.vehicle.mode"};
+    std::string subject_state_speed{"vehicles.{vin}.state.vehicle.speed"};
+    std::string subject_state_lights{"vehicles.{vin}.state.lights.status"};
+
     std::string signal_command_lock{"Vehicle.Command.Door.Lock"};
     std::string signal_command_response{"Vehicle.Command.Door.Response"};
-    std::string signal_is_locked{
-        "Vehicle.Cabin.Door.Row1.DriverSide.IsLocked"};
+    std::string signal_is_locked{"Vehicle.Cabin.Door.Row1.DriverSide.IsLocked"};
+    std::string subject_command_lights{"vehicles.{vin}.command.lights.set"};
+
+    std::string signal_mode{"Vehicle.Mode"};
+    std::string signal_speed{"Vehicle.Speed"};
+    std::string signal_lights{"Vehicle.Lights.Status"};
+    std::string signal_command_lights{"Vehicle.Command.Lights.Set"};
 };
 
 class CloudGatewayClient {
@@ -33,6 +42,7 @@ public:
 
 private:
     std::string resolveSubject(const std::string& pattern) const;
+    std::string resolveSubjectWildcard(const std::string& pattern) const;
     void onCloudCommand(const std::string& subject,
                         const std::vector<uint8_t>& data);
     void onLockStateChanged(const std::string& path,

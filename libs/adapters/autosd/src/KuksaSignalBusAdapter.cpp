@@ -55,7 +55,7 @@ struct KuksaSignalBusAdapter::Impl {
     std::atomic<bool> streaming{false};
     std::vector<std::thread> stream_threads;
     std::mutex ctx_mutex;
-    std::vector<grpc::ClientContext*> stream_contexts;
+    std::vector<std::shared_ptr<grpc::ClientContext>> stream_contexts;
 };
 
 KuksaSignalBusAdapter::KuksaSignalBusAdapter(const KuksaConfig& config)
@@ -84,7 +84,7 @@ void KuksaSignalBusAdapter::disconnect() {
     impl_->streaming = false;
     {
         std::lock_guard<std::mutex> lock(impl_->ctx_mutex);
-        for (auto* ctx : impl_->stream_contexts) {
+        for (auto& ctx : impl_->stream_contexts) {
             ctx->TryCancel();
         }
     }
@@ -92,7 +92,10 @@ void KuksaSignalBusAdapter::disconnect() {
         if (t.joinable()) t.join();
     }
     impl_->stream_threads.clear();
-    impl_->stream_contexts.clear();
+    {
+        std::lock_guard<std::mutex> lock(impl_->ctx_mutex);
+        impl_->stream_contexts.clear();
+    }
     impl_->stub.reset();
     impl_->channel.reset();
     connected_ = false;
@@ -142,16 +145,17 @@ void KuksaSignalBusAdapter::subscribe(const std::string& path,
 
     std::printf("[Kuksa] SUBSCRIBE %s\n", path.c_str());
 
-    impl_->stream_threads.emplace_back([this, path]() {
+    auto ctx = std::make_shared<grpc::ClientContext>();
+    {
+        std::lock_guard<std::mutex> lock(impl_->ctx_mutex);
+        impl_->stream_contexts.push_back(ctx);
+    }
+
+    impl_->stream_threads.emplace_back([this, path, ctx]() {
         kuksa::val::v2::SubscribeRequest request;
         request.add_signal_paths(path);
 
-        grpc::ClientContext ctx;
-        {
-            std::lock_guard<std::mutex> lock(impl_->ctx_mutex);
-            impl_->stream_contexts.push_back(&ctx);
-        }
-        auto reader = impl_->stub->Subscribe(&ctx, request);
+        auto reader = impl_->stub->Subscribe(ctx.get(), request);
 
         kuksa::val::v2::SubscribeResponse response;
         while (impl_->streaming && reader->Read(&response)) {

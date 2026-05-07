@@ -37,6 +37,9 @@ services:
       command_door_lock: "vehicles.{vin}.command.door.lock"
       command_door_response: "vehicles.{vin}.command.door.response"
       state_door_locked: "vehicles.{vin}.state.door.locked"
+      state_vehicle_mode: "vehicles.{vin}.state.vehicle.mode"
+      state_vehicle_speed: "vehicles.{vin}.state.vehicle.speed"
+      state_lights_status: "vehicles.{vin}.state.lights.status"
 
   vehicle_mode:
     service_id: 0x1002
@@ -48,6 +51,12 @@ services:
         notifier: 0x8001
     eventgroups:
       mode_events: 0x0001
+
+  vehicle_info:
+    service_id: 0x1004
+    instance_id: 0x0001
+    methods:
+      get_vin: 0x0001
 
   speed_sensor:
     service_id: 0x1003

@@ -34,18 +34,27 @@ esac
 
 REPO_DIR="${REPO_ROOT_DIR}/${TARGET}"
 
+if command -v podman &>/dev/null && podman info &>/dev/null 2>&1; then
+    CONTAINER_CMD=podman
+elif command -v docker &>/dev/null && docker info &>/dev/null 2>&1; then
+    CONTAINER_CMD=docker
+else
+    echo "Error: neither podman nor docker is available and running." >&2
+    exit 1
+fi
+
 mkdir -p "$OUTPUT_DIR"
 mkdir -p "$REPO_DIR"
 
-echo "=== Building ${IMAGE_NAME} container (${ARCH}) ==="
-podman build \
+echo "=== Building ${IMAGE_NAME} container (${ARCH}) [using ${CONTAINER_CMD}] ==="
+${CONTAINER_CMD} build \
     --platform "linux/${ARCH}" \
     -t "${IMAGE_NAME}:${ARCH}" \
     -f "${SCRIPT_DIR}/Containerfile.rpm-build" \
     "${PROJECT_ROOT}"
 
 echo "=== Building RPM target '${TARGET}' for ${ARCH} ==="
-podman run --rm \
+${CONTAINER_CMD} run --rm \
     --platform "linux/${ARCH}" \
     -v "${PROJECT_ROOT}:/src:Z" \
     -v "${OUTPUT_DIR}:/output:Z" \
