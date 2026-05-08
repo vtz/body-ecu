@@ -15,6 +15,7 @@ jobs:
     name: "ACP: Issue Comment"
     if: >-
       github.event_name == 'issue_comment' &&
+      !github.event.issue.pull_request &&
       contains(github.event.comment.body, '/ambient')
     runs-on: ubuntu-latest
     steps:
@@ -46,7 +47,7 @@ jobs:
     if: >-
       github.event_name == 'issues' &&
       (github.event.action == 'labeled' || github.event.action == 'opened') &&
-      contains(toJSON(github.event.issue.labels.*.name), 'ambient')
+      contains(toJSON(github.event.issue.labels.*.name), '"ambient"')
     runs-on: ubuntu-latest
     steps:
       - uses: ambient-code/ambient-action@v0.0.5
