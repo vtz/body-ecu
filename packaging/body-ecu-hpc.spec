@@ -99,7 +99,7 @@ install -Dpm 644 config/deployment.yaml \
 %config(noreplace) %{_sysconfdir}/body-ecu/deployment.yaml
 
 %changelog
-* Fri Apr 18 2026 Body ECU Contributors <body-ecu@example.com> - 0.2.0-1
+* Sat Apr 18 2026 Body ECU Contributors <body-ecu@example.com> - 0.2.0-1
 - Build AutoSD target with real Kuksa gRPC and NATS adapters
 - Add SystemdLifecycleAdapter (Type=notify)
 - Package VSS overlay, signal bridge, and deployment configs

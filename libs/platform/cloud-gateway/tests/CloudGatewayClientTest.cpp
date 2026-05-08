@@ -14,11 +14,16 @@ class CloudGatewayClientTest : public ::testing::Test {
 protected:
     void SetUp() override {
         EXPECT_CALL(transport_, connect()).WillOnce(Return(true));
-        EXPECT_CALL(transport_, subscribe(_, _))
+
+        EXPECT_CALL(transport_, subscribe(_, _)).Times(testing::AnyNumber());
+        EXPECT_CALL(transport_,
+                    subscribe(testing::HasSubstr("command.door.lock"), _))
             .WillOnce([this](const std::string&,
                              ports::CloudMessageCallback cb) {
                 cloud_cmd_cb_ = cb;
             });
+
+        EXPECT_CALL(signal_bus_, subscribe(_, _)).Times(testing::AnyNumber());
         EXPECT_CALL(signal_bus_, subscribe(config_.signal_is_locked, _))
             .WillOnce([this](const std::string&,
                              ports::SignalCallback cb) {

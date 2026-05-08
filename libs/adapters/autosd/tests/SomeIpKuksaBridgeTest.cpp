@@ -155,6 +155,7 @@ TEST_F(SomeIpKuksaBridgeTest, MultipleMappings) {
     bridge.addMapping(cmd_mapping_);
 
     EXPECT_CALL(someip_, registerMethod(0x1001, 0x8001, _)).Times(1);
+    EXPECT_CALL(someip_, registerMethod(0x1001, 0x0001, _)).Times(1);
     EXPECT_CALL(signal_bus_, subscribe("Vehicle.Command.Door.Lock", _))
         .Times(1);
 
