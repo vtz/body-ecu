@@ -33,6 +33,7 @@ LOG_MODULE_REGISTER(body_ecu, LOG_LEVEL_INF);
 #include "SpeedSimulatorSystem.h"
 #include "VehicleModeSystem.h"
 
+#include "someip_service_ids.h"
 #include "ports/NullButtonInput.h"
 
 #ifdef CONFIG_GPIO
@@ -233,6 +234,21 @@ int main(void)
     static adapters::VehicleInfoProvider vehicle_info;
     vehicle_info.setVin("WVW00000BODYECU01");
     vehicle_info.setEcuSerial("BECU-ZEP-001");
+
+    someip_system.registerMethod(
+        body_ecu::someip::vehicle_info::kServiceId,
+        body_ecu::someip::vehicle_info::method::kGetVin,
+        [&vehicle_info](const ports::SomeIpMessage& req) {
+            ports::SomeIpMessage resp = req;
+            resp.message_type = 0x80;
+            resp.return_code = 0x00;
+            auto vin_data = vehicle_info.readData(adapters::VehicleInfoProvider::kDidVin);
+            if (vin_data) {
+                resp.payload = vin_data->data;
+            }
+            return resp;
+        });
+    LOG_INF("Registered vehicle_info SOME/IP service (VIN)");
 
     LOG_INF("CP7: creating DiagnosticsSystem");
     static adapters::DiagnosticsSystem diagnostics;

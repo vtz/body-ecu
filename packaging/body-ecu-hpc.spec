@@ -1,4 +1,8 @@
 %global cmake_build_dir %{__cmake_builddir}
+%global __requires_exclude ^lib(grpc|absl|protobuf|address_sorting|upb|re2|cares|gpr|icu).*$
+%global __provides_exclude_from ^/usr/lib64/body-ecu/.*$
+%define _build_id_links none
+%define __brp_strip_rpath %{nil}
 
 Name:           body-ecu-hpc
 Version:        0.2.0
@@ -18,6 +22,8 @@ BuildRequires:  grpc-plugins
 BuildRequires:  protobuf-devel
 BuildRequires:  openssl-devel
 BuildRequires:  systemd-devel
+BuildRequires:  patchelf
+BuildRequires:  python3-pyyaml
 
 Recommends:     kuksa-databroker
 
@@ -39,6 +45,19 @@ through VSS-compliant paths.
 %install
 install -Dpm 755 %{cmake_build_dir}/body_ecu_autosd \
     %{buildroot}%{_bindir}/body-ecu-hpc
+
+mkdir -p %{buildroot}/usr/lib64/body-ecu
+for lib in $(ldd %{cmake_build_dir}/body_ecu_autosd \
+             | grep -E 'grpc|absl|protobuf|upb|re2|cares|gpr|address_sorting|libicu' \
+             | awk '{print $3}' | sort -u); do
+    [ -f "$lib" ] && install -pm 755 "$lib" %{buildroot}/usr/lib64/body-ecu/
+done
+
+patchelf --set-rpath /usr/lib64/body-ecu %{buildroot}%{_bindir}/body-ecu-hpc
+for so in %{buildroot}/usr/lib64/body-ecu/*.so*; do
+    patchelf --set-rpath /usr/lib64/body-ecu "$so" 2>/dev/null || true
+done
+strip --strip-debug %{buildroot}/usr/lib64/body-ecu/*.so* 2>/dev/null || true
 
 install -Dpm 644 packaging/body-ecu-hpc.service \
     %{buildroot}%{_unitdir}/body-ecu-hpc.service
@@ -70,6 +89,7 @@ install -Dpm 644 config/deployment.yaml \
 %files
 %license LICENSE
 %{_bindir}/body-ecu-hpc
+/usr/lib64/body-ecu/
 %{_unitdir}/body-ecu-hpc.service
 %dir %{_sysconfdir}/body-ecu
 %config(noreplace) %{_sysconfdir}/body-ecu/body-ecu-hpc.env
@@ -79,7 +99,7 @@ install -Dpm 644 config/deployment.yaml \
 %config(noreplace) %{_sysconfdir}/body-ecu/deployment.yaml
 
 %changelog
-* Fri Apr 18 2026 Body ECU Contributors <body-ecu@example.com> - 0.2.0-1
+* Sat Apr 18 2026 Body ECU Contributors <body-ecu@example.com> - 0.2.0-1
 - Build AutoSD target with real Kuksa gRPC and NATS adapters
 - Add SystemdLifecycleAdapter (Type=notify)
 - Package VSS overlay, signal bridge, and deployment configs

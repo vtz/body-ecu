@@ -1,0 +1,62 @@
+{
+  "Vehicle": {
+    "type": "branch",
+    "description": "Vehicle",
+    "children": {
+      "Mode": {
+        "type": "sensor",
+        "datatype": "int32",
+        "description": "Vehicle mode (0=OFF, 1=ACC, 2=CRANK, 3=RUN)"
+      },
+      "Speed": {
+        "type": "sensor",
+        "datatype": "float",
+        "description": "Vehicle speed in km/h"
+      },
+      "Lights": {
+        "type": "branch",
+        "description": "Exterior lighting",
+        "children": {
+          "Status": {
+            "type": "sensor",
+            "datatype": "int32",
+            "description": "Light status bitmask"
+          }
+        }
+      },
+      "Command": {
+        "type": "branch",
+        "description": "Vehicle commands",
+        "children": {
+          "Door": {
+            "type": "branch",
+            "description": "Door commands",
+            "children": {
+              "Lock": {
+                "type": "actuator",
+                "datatype": "boolean",
+                "description": "Remote lock command (true=lock, false=unlock)"
+              },
+              "Response": {
+                "type": "sensor",
+                "datatype": "int32",
+                "description": "Lock command result (0x00=success, 0x01=rejected)"
+              }
+            }
+          },
+          "Lights": {
+            "type": "branch",
+            "description": "Light commands",
+            "children": {
+              "Set": {
+                "type": "actuator",
+                "datatype": "int32",
+                "description": "Packed light command: (light_id << 8) | state"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

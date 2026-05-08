@@ -173,7 +173,7 @@ jobs:
             systemd-rpm-macros systemd-devel \
             grpc-devel grpc-plugins \
             protobuf-devel protobuf-compiler \
-            openssl-devel
+            openssl-devel patchelf python3-pyyaml
 
       - name: Setup rpmbuild tree
         run: rpmdev-setuptree

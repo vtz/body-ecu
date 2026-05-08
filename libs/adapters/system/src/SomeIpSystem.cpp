@@ -83,13 +83,25 @@ void SomeIpSystem::initSd() {
             return;
         }
 
-        sd_client_->find_service(0x1001,
-            [this](const std::vector<::someip::sd::ServiceInstance>& svcs) {
-                onServiceFound(svcs);
-            },
-            std::chrono::milliseconds(10000));
+        std::set<uint16_t> service_ids;
+        service_ids.insert(0x1001);
+        {
+            PlatformLockGuard lock(mutex_);
+            for (const auto& ev : events_) {
+                service_ids.insert(ev.service_id);
+            }
+        }
 
-        std::printf("[SOME/IP-SD] Client searching for services (multicast %s:%u)\n",
+        for (uint16_t sid : service_ids) {
+            sd_client_->find_service(sid,
+                [this](const std::vector<::someip::sd::ServiceInstance>& svcs) {
+                    onServiceFound(svcs);
+                },
+                std::chrono::milliseconds(30000));
+            std::printf("[SOME/IP-SD] Searching for service 0x%04X\n", sid);
+        }
+
+        std::printf("[SOME/IP-SD] Client searching on multicast %s:%u\n",
                     config_.sd_multicast.c_str(), config_.sd_port);
     }
 }
@@ -114,9 +126,23 @@ void SomeIpSystem::onServiceFound(
             server_endpoint_ = ::someip::transport::Endpoint(svc.ip_address, svc.port);
 
             if (sd_client_) {
-                sd_client_->subscribe_eventgroup(svc.service_id, svc.instance_id, 0x0001);
-                std::printf("[SOME/IP-SD] Subscribed to eventgroup 0x0001 of service 0x%04X\n",
-                            svc.service_id);
+                std::set<uint16_t> egs;
+                {
+                    PlatformLockGuard lock(mutex_);
+                    for (const auto& ev : events_) {
+                        if (ev.service_id == svc.service_id) {
+                            egs.insert(ev.eventgroup_id);
+                        }
+                    }
+                }
+                if (egs.empty()) {
+                    egs.insert(0x0001);
+                }
+                for (uint16_t eg : egs) {
+                    sd_client_->subscribe_eventgroup(svc.service_id, svc.instance_id, eg);
+                    std::printf("[SOME/IP-SD] Subscribed to eventgroup 0x%04X of service 0x%04X\n",
+                                eg, svc.service_id);
+                }
             }
         }
     }

@@ -1,6 +1,7 @@
 #include "cloud_gateway/CloudGatewayClient.h"
 
 #include <algorithm>
+#include <cstring>
 
 namespace body_ecu::platform {
 
@@ -20,15 +21,37 @@ std::string CloudGatewayClient::resolveSubject(
     return result;
 }
 
+std::string CloudGatewayClient::resolveSubjectWildcard(
+    const std::string& pattern) const {
+    std::string result = pattern;
+    const std::string placeholder = "{vin}";
+    auto pos = result.find(placeholder);
+    if (pos != std::string::npos) {
+        result.replace(pos, placeholder.size(), "*");
+    }
+    return result;
+}
+
 void CloudGatewayClient::init() {
     connected_ = transport_.connect();
     if (!connected_) return;
 
     transport_.subscribe(
-        resolveSubject(config_.subject_command_lock),
+        resolveSubjectWildcard(config_.subject_command_lock),
         [this](const std::string& subject,
                const std::vector<uint8_t>& data) {
             onCloudCommand(subject, data);
+        });
+
+    transport_.subscribe(
+        resolveSubjectWildcard(config_.subject_command_lights),
+        [this](const std::string& /*subject*/,
+               const std::vector<uint8_t>& data) {
+            if (data.size() >= 2) {
+                int32_t packed = (static_cast<int32_t>(data[0]) << 8) | data[1];
+                signal_bus_.publish(config_.signal_command_lights,
+                                   ports::SignalValue{packed});
+            }
         });
 
     signal_bus_.subscribe(
@@ -41,6 +64,39 @@ void CloudGatewayClient::init() {
         config_.signal_command_response,
         [this](const std::string& path, const ports::SignalValue& value) {
             onCommandResponse(path, value);
+        });
+
+    signal_bus_.subscribe(
+        config_.signal_mode,
+        [this](const std::string& /*path*/, const ports::SignalValue& value) {
+            auto* v = std::get_if<int32_t>(&value);
+            if (!v) return;
+            std::vector<uint8_t> payload = {static_cast<uint8_t>(*v)};
+            transport_.publish(resolveSubject(config_.subject_state_mode), payload);
+        });
+
+    signal_bus_.subscribe(
+        config_.signal_speed,
+        [this](const std::string& /*path*/, const ports::SignalValue& value) {
+            auto* v = std::get_if<float>(&value);
+            if (!v) return;
+            uint32_t bits;
+            std::memcpy(&bits, v, sizeof(bits));
+            std::vector<uint8_t> payload = {
+                static_cast<uint8_t>((bits >> 24) & 0xFF),
+                static_cast<uint8_t>((bits >> 16) & 0xFF),
+                static_cast<uint8_t>((bits >> 8) & 0xFF),
+                static_cast<uint8_t>(bits & 0xFF)};
+            transport_.publish(resolveSubject(config_.subject_state_speed), payload);
+        });
+
+    signal_bus_.subscribe(
+        config_.signal_lights,
+        [this](const std::string& /*path*/, const ports::SignalValue& value) {
+            auto* v = std::get_if<int32_t>(&value);
+            if (!v) return;
+            std::vector<uint8_t> payload = {static_cast<uint8_t>(*v)};
+            transport_.publish(resolveSubject(config_.subject_state_lights), payload);
         });
 }
 

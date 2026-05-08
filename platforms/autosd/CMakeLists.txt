@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(body_ecu_autosd CXX)
+project(body_ecu_autosd C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -67,14 +67,29 @@ target_compile_definitions(someip_system PUBLIC HAS_OPENSOMEIP)
 # AutoSD adapters (Kuksa, NATS, SomeIpKuksaBridge)
 add_subdirectory(${LIBS_ROOT}/adapters/autosd ${CMAKE_CURRENT_BINARY_DIR}/adapters-autosd)
 
+set(POSIX_MPU_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../posix-mpu)
+
+# Linenoise (terminal line editing for CLI)
+add_library(linenoise STATIC ${POSIX_MPU_DIR}/third_party/linenoise.c)
+target_include_directories(linenoise PUBLIC ${POSIX_MPU_DIR}/third_party)
+
 # AutoSD executable
-add_executable(body_ecu_autosd main.cpp)
+add_executable(body_ecu_autosd main.cpp ${POSIX_MPU_DIR}/cli.cpp)
+target_include_directories(body_ecu_autosd PRIVATE ${POSIX_MPU_DIR})
 target_link_libraries(body_ecu_autosd PRIVATE
     cloud_gateway_client
     adapters_autosd
     someip_system
+    someip_ids
     lifecycle
+    linenoise
 )
+
+if(BODY_ECU_REAL_ADAPTERS)
+    set_target_properties(body_ecu_autosd PROPERTIES
+        INSTALL_RPATH "/usr/lib64/body-ecu"
+        BUILD_WITH_INSTALL_RPATH ON)
+endif()
 
 if(BODY_ECU_REAL_ADAPTERS AND SYSTEMD_FOUND)
     target_link_libraries(body_ecu_autosd PRIVATE ${SYSTEMD_LIBRARIES})

@@ -23,6 +23,16 @@ Vehicle.Speed:
   datatype: float
   description: "Vehicle speed in km/h"
 
+Vehicle.Mode:
+  type: sensor
+  datatype: uint8
+  description: "Vehicle mode (0=OFF, 1=ACC, 2=CRANK, 3=RUN)"
+
+Vehicle.Lights.Status:
+  type: sensor
+  datatype: uint8
+  description: "Light status bitmask"
+
 Vehicle.Parking.SessionActive:
   type: sensor
   datatype: boolean

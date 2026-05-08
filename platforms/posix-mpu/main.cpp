@@ -9,8 +9,14 @@
 #include "SomeIpSystem.h"
 #include "autosd_adapters/SomeIpKuksaBridge.h"
 #include "cloud_gateway/CloudGatewayClient.h"
+
+#ifdef BODY_ECU_REAL_ADAPTERS
+#include "autosd_adapters/KuksaSignalBusAdapter.h"
+#include "autosd_adapters/NatsCloudTransportAdapter.h"
+#else
 #include "linux_adapters/InProcessSignalBus.h"
 #include "linux_adapters/StubCloudTransport.h"
+#endif
 
 #include "cli.h"
 #include "someip_service_ids.h"
@@ -42,8 +48,23 @@ int main(int argc, char* argv[])
         .host = mcu_host, .port = mcu_port, .role = adapters::SomeIpRole::Client};
     adapters::SomeIpSystem someip_client(someip_cfg);
 
+#ifdef BODY_ECU_REAL_ADAPTERS
+    const char* kuksa_host = std::getenv("KUKSA_HOST") ? std::getenv("KUKSA_HOST") : "localhost";
+    uint16_t kuksa_port = std::getenv("KUKSA_PORT") ? static_cast<uint16_t>(std::atoi(std::getenv("KUKSA_PORT"))) : 55555;
+    adapters::KuksaConfig kuksa_cfg{kuksa_host, kuksa_port};
+    adapters::KuksaSignalBusAdapter signal_bus(kuksa_cfg);
+
+    const char* nats_url_env = std::getenv("NATS_URL");
+    adapters::NatsConfig nats_cfg{nats_url_env ? nats_url_env : "nats://localhost:4222"};
+    adapters::NatsCloudTransportAdapter cloud_transport(nats_cfg);
+
+    std::printf("Real adapters: Kuksa=%s:%u, NATS=%s\n",
+                kuksa_cfg.host.c_str(), kuksa_cfg.port, nats_cfg.url.c_str());
+#else
     adapters::InProcessSignalBus signal_bus;
     adapters::StubCloudTransport cloud_transport;
+    std::printf("Using stub adapters (build with -DBODY_ECU_REAL_ADAPTERS=ON for real NATS/Kuksa)\n");
+#endif
 
     adapters::SomeIpKuksaBridge bridge(someip_client, signal_bus);
 
@@ -51,6 +72,7 @@ int main(int argc, char* argv[])
     lock_event.signal_path =
         "Vehicle.Cabin.Door.Row1.DriverSide.IsLocked";
     lock_event.direction = adapters::BridgeDirection::EventToSignal;
+    lock_event.datatype = adapters::SignalDataType::Bool;
     lock_event.someip_service_id = body_ecu::someip::door_lock::kServiceId;
     lock_event.someip_method_or_event_id = body_ecu::someip::door_lock::event::kLockStateChanged;
     lock_event.someip_eventgroup_id = body_ecu::someip::door_lock::eventgroup::kDoorEvents;
@@ -59,13 +81,16 @@ int main(int argc, char* argv[])
     adapters::BridgeMapping lock_cmd;
     lock_cmd.signal_path = "Vehicle.Command.Door.Lock";
     lock_cmd.direction = adapters::BridgeDirection::SignalToMethod;
+    lock_cmd.datatype = adapters::SignalDataType::Bool;
     lock_cmd.someip_service_id = body_ecu::someip::door_lock::kServiceId;
     lock_cmd.someip_method_or_event_id = body_ecu::someip::door_lock::method::kLock;
+    lock_cmd.someip_false_method_id = body_ecu::someip::door_lock::method::kUnlock;
     bridge.addMapping(lock_cmd);
 
     adapters::BridgeMapping speed_event;
     speed_event.signal_path = "Vehicle.Speed";
     speed_event.direction = adapters::BridgeDirection::EventToSignal;
+    speed_event.datatype = adapters::SignalDataType::Float;
     speed_event.someip_service_id = body_ecu::someip::speed_sensor::kServiceId;
     speed_event.someip_method_or_event_id = body_ecu::someip::speed_sensor::event::kSpeedChanged;
     speed_event.someip_eventgroup_id = body_ecu::someip::speed_sensor::eventgroup::kSpeedEvents;
@@ -91,6 +116,10 @@ int main(int argc, char* argv[])
     platform::CloudGatewayClient gateway(cloud_transport, signal_bus,
                                          gw_config);
 
+#ifdef BODY_ECU_REAL_ADAPTERS
+    signal_bus.connect();
+#endif
+
     lifecycle::LifecycleManager lm;
     lm.addComponent("someip_client", someip_client, 1);
 
@@ -115,6 +144,9 @@ int main(int argc, char* argv[])
     gateway.shutdown();
     bridge.shutdown();
     lm.shutdownAll();
+#ifdef BODY_ECU_REAL_ADAPTERS
+    signal_bus.disconnect();
+#endif
 
     std::printf("Body ECU MPU stopped.\n");
     return 0;

@@ -77,6 +77,7 @@ target_link_libraries(app PRIVATE
     diagnostics
     adapters_zephyr
     adapters_system
+    someip_ids
     asyncBinding
     asyncZephyrImpl
     configuration

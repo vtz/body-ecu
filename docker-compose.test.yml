@@ -1,0 +1,36 @@
+# Test environment: NATS broker + Kuksa Databroker for MPU <-> cloud testing.
+#
+# Usage:
+#   docker compose -f docker-compose.test.yml up -d
+#   docker compose -f docker-compose.test.yml down
+#
+# NATS is exposed on localhost:4222.
+# Kuksa Databroker is exposed on localhost:55556 (gRPC, mapped from container 55555).
+
+services:
+  nats:
+    image: nats:2-alpine
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: ["--js", "-m", "8222"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8222/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+
+  kuksa-databroker:
+    image: ghcr.io/eclipse-kuksa/kuksa-databroker:0.6.0
+    ports:
+      - "55556:55555"
+    command:
+      - "--address"
+      - "0.0.0.0"
+      - "--insecure"
+    healthcheck:
+      test: ["CMD-SHELL", "true"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 3s
