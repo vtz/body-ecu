@@ -37,6 +37,11 @@ public:
     void dispatchMessage(const std::string& subject,
                          const std::vector<uint8_t>& data);
 
+    /// Returns true if a NATS subject matches a pattern containing '*'
+    /// (single-token) and '>' (tail-match) wildcards.
+    static bool subjectMatchesPattern(const std::string& pattern,
+                                      const std::string& subject);
+
 private:
     NatsConfig config_;
     bool connected_{false};

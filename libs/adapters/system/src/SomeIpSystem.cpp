@@ -170,13 +170,17 @@ void SomeIpSystem::shutdown() {
 #ifdef HAS_OPENSOMEIP
     shutdownSd();
     if (transport_) {
+        transport_->set_listener(nullptr);
         transport_->stop();
         std::printf("[SOME/IP] Transport stopped\n");
     }
 #endif
-    PlatformLockGuard lock(mutex_);
-    methods_.clear();
-    events_.clear();
+    {
+        PlatformLockGuard lock(mutex_);
+        methods_.clear();
+        events_.clear();
+        pending_events_.clear();
+    }
     transitionDone();
 }
 
@@ -205,9 +209,12 @@ void SomeIpSystem::sendEvent(uint16_t service_id, uint16_t event_id,
 #endif
 
 #ifdef HAS_OPENSOMEIP
-    if (dispatching_) {
-        pending_events_.push_back(msg);
-        return;
+    {
+        PlatformLockGuard lock(mutex_);
+        if (dispatching_) {
+            pending_events_.push_back(msg);
+            return;
+        }
     }
     if (transport_ && running_) {
         auto someip_msg = toSomeIp(msg);
@@ -289,25 +296,32 @@ void SomeIpSystem::on_message_received(
 
     if (message->is_request()) {
         SOMEIP_LOG("[SOME/IP] >> dispatch\n");
-        dispatching_ = true;
+        {
+            PlatformLockGuard lock(mutex_);
+            dispatching_ = true;
+        }
         auto response = dispatch(incoming);
-        dispatching_ = false;
+        std::vector<ports::SomeIpMessage> deferred;
+        {
+            PlatformLockGuard lock(mutex_);
+            dispatching_ = false;
+            deferred.swap(pending_events_);
+        }
         SOMEIP_LOG("[SOME/IP] << dispatch rc=0x%02X pending=%zu\n",
-                   response.return_code, pending_events_.size());
+                   response.return_code, deferred.size());
         response.message_type = 0x80;  // RESPONSE
         auto resp_msg = toSomeIp(response);
         SOMEIP_LOG("[SOME/IP] >> send response\n");
         (void)transport_->send_message(resp_msg, sender);
         SOMEIP_LOG("[SOME/IP] << send response OK\n");
 
-        for (auto& evt : pending_events_) {
+        for (auto& evt : deferred) {
             auto evt_msg = toSomeIp(evt);
             PlatformLockGuard lock(mutex_);
             for (const auto& client : known_clients_) {
                 (void)transport_->send_message(evt_msg, client);
             }
         }
-        pending_events_.clear();
     } else {
         ports::MethodHandler handler;
         {

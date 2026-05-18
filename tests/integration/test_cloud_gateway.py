@@ -163,8 +163,7 @@ class TestCloudGatewayStub:
     def test_lock_event_reaches_cloud_gateway(self, someip_socket,
                                                cloud_gateway_env):
         """Locking via SOME/IP should propagate through the bridge to the
-        cloud gateway client. With stub transport, this means the MPU
-        process should remain healthy after receiving the event."""
+        cloud gateway client and the MCU state must reflect the change."""
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 UNLOCK_METHOD))
         recv_method_response(someip_socket)
@@ -172,16 +171,23 @@ class TestCloudGatewayStub:
 
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 LOCK_METHOD))
-        recv_method_response(someip_socket)
+        resp = recv_method_response(someip_socket)
+        assert resp["return_code"] == 0x00, "Lock command must succeed"
 
         time.sleep(0.5)
+
+        someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
+                                                GET_STATUS_METHOD))
+        status = recv_method_response(someip_socket)
+        assert status["payload"][0] == 0x01, "MCU must report Locked"
 
         assert cloud_gateway_env["mpu"].poll() is None, \
             "MPU process crashed after lock event"
 
     def test_unlock_event_reaches_cloud_gateway(self, someip_socket,
                                                  cloud_gateway_env):
-        """Unlocking via SOME/IP should also propagate."""
+        """Unlocking via SOME/IP should propagate and the MCU state
+        must reflect Unlocked."""
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 LOCK_METHOD))
         recv_method_response(someip_socket)
@@ -189,25 +195,40 @@ class TestCloudGatewayStub:
 
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 UNLOCK_METHOD))
-        recv_method_response(someip_socket)
+        resp = recv_method_response(someip_socket)
+        assert resp["return_code"] == 0x00, "Unlock command must succeed"
 
         time.sleep(0.5)
+
+        someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
+                                                GET_STATUS_METHOD))
+        status = recv_method_response(someip_socket)
+        assert status["payload"][0] == 0x00, "MCU must report Unlocked"
 
         assert cloud_gateway_env["mpu"].poll() is None, \
             "MPU process crashed after unlock event"
 
     def test_cloud_gateway_survives_rapid_state_changes(
             self, someip_socket, cloud_gateway_env):
-        """Rapid lock/unlock should not crash the cloud gateway client."""
+        """Rapid lock/unlock should not crash either process and leave
+        a deterministic final state."""
         for _ in range(20):
             someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                     LOCK_METHOD))
-            recv_method_response(someip_socket)
+            resp = recv_method_response(someip_socket)
+            assert resp["return_code"] == 0x00
             someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                     UNLOCK_METHOD))
-            recv_method_response(someip_socket)
+            resp = recv_method_response(someip_socket)
+            assert resp["return_code"] == 0x00
 
         time.sleep(0.5)
+
+        someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
+                                                GET_STATUS_METHOD))
+        status = recv_method_response(someip_socket)
+        assert status["payload"][0] == 0x00, "Final state must be Unlocked"
+
         assert cloud_gateway_env["mcu"].poll() is None, "MCU crashed"
         assert cloud_gateway_env["mpu"].poll() is None, "MPU crashed"
 

@@ -207,6 +207,28 @@ TEST_F(CanGatewayTest, BidirectionalMapping) {
     EXPECT_EQ(captured_payload[2], 0x33);
 }
 
+TEST(CanFrameDlcValidation, MaxDlcClampedInTranslation) {
+    // DLC > 64 must not cause overflow in MessageTranslator
+    auto frame = MessageTranslator::someipToCanFrame(0x100, 255, {0x01, 0x02});
+    EXPECT_LE(frame.dlc, sizeof(frame.data));
+
+    auto payload = MessageTranslator::canFrameToSomeipPayload(frame);
+    EXPECT_LE(payload.size(), sizeof(frame.data));
+}
+
+TEST(CanFrameDlcValidation, ZeroDlcIsValid) {
+    auto frame = MessageTranslator::someipToCanFrame(0x100, 0, {});
+    EXPECT_EQ(frame.dlc, 0);
+    auto payload = MessageTranslator::canFrameToSomeipPayload(frame);
+    EXPECT_TRUE(payload.empty());
+}
+
+TEST(CanFrameDlcValidation, ClassicCanMaxDlc) {
+    std::vector<uint8_t> data(8, 0xAA);
+    auto frame = MessageTranslator::someipToCanFrame(0x100, 8, data);
+    EXPECT_EQ(frame.dlc, 8);
+}
+
 TEST_F(CanGatewayTest, MappingLoadFromConfig) {
     MockCanBus cfg_can;
     MockSomeIpService cfg_someip;

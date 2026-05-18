@@ -1,6 +1,36 @@
 #include "autosd_adapters/NatsCloudTransportAdapter.h"
 
 #include <cstdio>
+#include <sstream>
+
+namespace body_ecu::adapters {
+
+bool NatsCloudTransportAdapter::subjectMatchesPattern(
+    const std::string& pattern, const std::string& subject) {
+    if (pattern == subject) return true;
+
+    auto tokenize = [](const std::string& s) {
+        std::vector<std::string> tokens;
+        std::istringstream iss(s);
+        std::string tok;
+        while (std::getline(iss, tok, '.')) tokens.push_back(tok);
+        return tokens;
+    };
+
+    auto pat_tokens = tokenize(pattern);
+    auto sub_tokens = tokenize(subject);
+
+    size_t pi = 0;
+    for (size_t si = 0; si < sub_tokens.size(); ++si, ++pi) {
+        if (pi >= pat_tokens.size()) return false;
+        if (pat_tokens[pi] == ">") return true;
+        if (pat_tokens[pi] != "*" && pat_tokens[pi] != sub_tokens[si])
+            return false;
+    }
+    return pi == pat_tokens.size();
+}
+
+}  // namespace body_ecu::adapters
 
 #ifdef HAS_NATS
 
@@ -116,9 +146,10 @@ void NatsCloudTransportAdapter::subscribe(
 void NatsCloudTransportAdapter::dispatchMessage(
     const std::string& subject, const std::vector<uint8_t>& data) {
     std::lock_guard<std::mutex> lock(mutex_);
-    auto it = subscribers_.find(subject);
-    if (it != subscribers_.end()) {
-        it->second(subject, data);
+    for (auto& [pattern, cb] : subscribers_) {
+        if (subjectMatchesPattern(pattern, subject)) {
+            cb(subject, data);
+        }
     }
 }
 
@@ -165,9 +196,10 @@ void NatsCloudTransportAdapter::subscribe(
 void NatsCloudTransportAdapter::dispatchMessage(
     const std::string& subject, const std::vector<uint8_t>& data) {
     std::lock_guard<std::mutex> lock(mutex_);
-    auto it = subscribers_.find(subject);
-    if (it != subscribers_.end()) {
-        it->second(subject, data);
+    for (auto& [pattern, cb] : subscribers_) {
+        if (subjectMatchesPattern(pattern, subject)) {
+            cb(subject, data);
+        }
     }
 }
 

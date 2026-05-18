@@ -1,6 +1,7 @@
 #pragma once
 
 #include <map>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -8,9 +9,8 @@
 
 namespace body_ecu::adapters {
 
-/// Lightweight in-process ISignalBus for MCU (Zephyr) builds.
-/// No gRPC dependency. Used for internal cross-service communication;
-/// cross-processor signals use SOME/IP.
+/// Lightweight in-process ISignalBus for MCU (Zephyr) and POSIX builds.
+/// Thread-safe: all operations are guarded by a mutex.
 class LocalSignalBus : public ports::ISignalBus {
 public:
     bool publish(const std::string& path,
@@ -21,6 +21,7 @@ public:
         const std::string& path) const override;
 
 private:
+    mutable std::mutex mutex_;
     std::map<std::string, ports::SignalValue> store_;
     std::map<std::string, std::vector<ports::SignalCallback>> subscribers_;
 };

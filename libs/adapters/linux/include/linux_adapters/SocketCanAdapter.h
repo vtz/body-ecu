@@ -4,6 +4,7 @@
 #include <string>
 #include <thread>
 #include <atomic>
+#include <vector>
 
 #include "ports/ICanBus.h"
 
@@ -27,14 +28,14 @@ public:
     bool isOpen() const { return fd_ >= 0; }
 
     bool send(const ports::CanFrame& frame) override;
-    void setRxCallback(ports::CanRxCallback callback) override;
+    void addRxCallback(ports::CanRxCallback callback) override;
 
 private:
     void rxLoop();
 
     std::string iface_;
     int fd_{-1};
-    ports::CanRxCallback rx_callback_;
+    std::vector<ports::CanRxCallback> rx_callbacks_;
     std::atomic<bool> running_{false};
     std::thread rx_thread_;
 };

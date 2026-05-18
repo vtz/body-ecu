@@ -160,3 +160,17 @@ TEST_F(IgnitionControllerTest, SpeedZeroAllowsTurnOff) {
     pressButton();
     EXPECT_EQ(mode_manager_.getMode(), ports::VehicleMode::Accessory);
 }
+
+TEST_F(IgnitionControllerTest, TimerExhaustionRevertsToAccessory) {
+    ON_CALL(timer_, startOneShot(_, _))
+        .WillByDefault(Return(ports::kInvalidTimerId));
+
+    mode_manager_.init();
+    initController();
+    EXPECT_EQ(mode_manager_.getMode(), ports::VehicleMode::Accessory);
+
+    pressButton();
+    // Timer allocation failed — controller must revert to Accessory,
+    // not stay stuck in Crank indefinitely.
+    EXPECT_EQ(mode_manager_.getMode(), ports::VehicleMode::Accessory);
+}

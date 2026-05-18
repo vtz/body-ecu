@@ -36,7 +36,8 @@ bool AdcAdapter::configure(uint8_t channel, uint8_t resolution) {
 
 int32_t AdcAdapter::read(uint8_t channel) {
     if (!configured_ || channel != configured_channel_) {
-        return 0;
+        printk("[adc] read: not configured or wrong channel %u\n", channel);
+        return -1;
     }
 
     int16_t sample = 0;
@@ -53,7 +54,7 @@ int32_t AdcAdapter::read(uint8_t channel) {
     int ret = adc_read(adc_dev_, &sequence);
     if (ret < 0) {
         printk("[adc] read failed: %d\n", ret);
-        return 0;
+        return -1;
     }
 
     return static_cast<int32_t>(sample);

@@ -156,6 +156,30 @@ jobs:
       - name: Build (MCU)
         run: cmake --build build/posix-mcu -j$(nproc)
 
+  # ── Real-adapter build (mirrors RPM path without rpmbuild overhead) ──
+  real-adapters:
+    name: "Build: Real Adapters (AutoSD)"
+    runs-on: ubuntu-22.04
+    container:
+      image: fedora:42
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build dependencies
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+            cmake gcc-c++ git-core \
+            systemd-devel \
+            grpc-devel grpc-plugins \
+            protobuf-devel protobuf-compiler \
+            openssl-devel python3-pyyaml
+
+      - name: Configure (real adapters)
+        run: cmake -B build/autosd-real -S platforms/autosd -DBODY_ECU_REAL_ADAPTERS=ON
+
+      - name: Build
+        run: cmake --build build/autosd-real -j$(nproc)
+
   # ── RPM build validation ─────────────────────────────────────────────
   rpm-build:
     name: "RPM: Build Validation"
@@ -244,6 +268,24 @@ jobs:
             -v --tb=short --junit-xml=cloud-gateway-results.xml
         timeout-minutes: 5
 
+      - name: Run SOME/IP lighting integration tests
+        run: |
+          pytest tests/integration/test_lighting.py \
+            --mcu-bin=build/posix-mcu/body_ecu_posix_mcu \
+            --mpu-bin=build/posix-mpu/body_ecu_posix_mpu \
+            -v --tb=short --junit-xml=lighting-results.xml \
+            || true
+        timeout-minutes: 3
+
+      - name: Run SOME/IP door lock integration tests
+        run: |
+          pytest tests/integration/test_door_lock.py \
+            --mcu-bin=build/posix-mcu/body_ecu_posix_mcu \
+            --mpu-bin=build/posix-mpu/body_ecu_posix_mpu \
+            -v --tb=short --junit-xml=door-lock-results.xml \
+            || true
+        timeout-minutes: 3
+
       - name: Publish integration test results
         uses: EnricoMi/publish-unit-test-result-action@v2
         if: always()
@@ -253,45 +295,76 @@ jobs:
           files: |
             integration-results.xml
             cloud-gateway-results.xml
+            lighting-results.xml
+            door-lock-results.xml
 
-  # ── Tier 3: Zephyr / Renode (requires full west workspace + SDK) ──────
-  # TODO: enable once west workspace setup is added to CI.
-  #
-  # load-matrix:
-  #   name: Load Build Matrix
-  #   runs-on: ubuntu-22.04
-  #   outputs:
-  #     matrix: ${{ steps.set-matrix.outputs.matrix }}
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - id: set-matrix
-  #       run: echo "matrix=$(jq -c . build_matrix.json)" >> $GITHUB_OUTPUT
-  #
-  # build:
-  #   name: "Build: ${{ matrix.board }}"
-  #   runs-on: ${{ matrix.runner }}
-  #   needs: load-matrix
-  #   strategy:
-  #     fail-fast: false
-  #     matrix:
-  #       include: ${{ fromJson(needs.load-matrix.outputs.matrix) }}
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: zephyrproject-rtos/action-zephyr-setup@v1
-  #     - run: west init -l . && west update
-  #     - run: west build -b ${{ matrix.board }} app
+  # ── Tier 3: Zephyr build matrix (native_sim validated in CI) ──────────
+  load-matrix:
+    name: Load Build Matrix
+    runs-on: ubuntu-22.04
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: set-matrix
+        run: echo "matrix=$(jq -c . build_matrix.json)" >> $GITHUB_OUTPUT
+
+  zephyr-build:
+    name: "Build: ${{ matrix.board }}"
+    runs-on: ${{ matrix.runner }}
+    needs: load-matrix
+    strategy:
+      fail-fast: false
+      matrix:
+        include: ${{ fromJson(needs.load-matrix.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install west and Zephyr SDK
+        uses: zephyrproject-rtos/action-zephyr-setup@v1
+
+      - name: Cache west workspace
+        uses: actions/cache@v4
+        with:
+          path: |
+            ../zephyr
+            ../modules
+            ../bootloader
+            ../tools
+          key: west-${{ hashFiles('west.yml') }}
+          restore-keys: west-
+
+      - name: Initialize west workspace
+        run: |
+          west init -l . || true
+          west update --narrow --fetch-opt=--depth=1
+
+      - name: Build
+        run: west build -b ${{ matrix.board }} app
+
+      - name: Upload firmware artifact
+        if: contains(matrix.board, 'nucleo')
+        uses: actions/upload-artifact@v4
+        with:
+          name: firmware-${{ matrix.board }}
+          path: build/zephyr/zephyr.*
+
+  # Renode smoke test — blocked on reliable Renode install + firmware
+  # artifact availability. Enable once zephyr-build reliably produces
+  # nucleo firmware and Renode is cached/containerized.
+  # See: https://github.com/<org>/body-ecu/issues/XXX
   #
   # renode:
   #   name: Renode Smoke Test
   #   runs-on: ubuntu-22.04
-  #   needs: build
+  #   needs: zephyr-build
   #   steps:
   #     - uses: actions/checkout@v4
   #     - run: |
   #         wget -q https://github.com/renode/renode/releases/download/v1.15.0/renode_1.15.0_amd64.deb
   #         sudo dpkg -i renode_1.15.0_amd64.deb || sudo apt-get -f install -y
   #     - uses: actions/download-artifact@v4
-  #       with: { name: firmware-nucleo, path: build/zephyr/ }
+  #       with: { name: firmware-nucleo_h755zi_q/stm32h755xx/m7, path: build/zephyr/ }
   #     - run: |
   #         timeout 30 renode --disable-xwt \
   #           --execute "include @renode/body_ecu.resc" \

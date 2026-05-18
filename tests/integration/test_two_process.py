@@ -173,7 +173,11 @@ class TestTwoProcessIntegration:
         assert resp["payload"][0] == 0x01  # Locked
 
     def test_mpu_receives_event(self, someip_socket, two_process_env):
-        """MPU should log the lock state change event from MCU."""
+        """MPU should receive the lock state change event from MCU.
+
+        Verify by confirming the MCU state round-trips correctly and
+        both processes remain healthy after the state change.
+        """
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 UNLOCK_METHOD))
         recv_method_response(someip_socket)
@@ -181,12 +185,21 @@ class TestTwoProcessIntegration:
 
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 LOCK_METHOD))
-        recv_method_response(someip_socket)
+        lock_resp = recv_method_response(someip_socket)
+        assert lock_resp["return_code"] == 0x00, "Lock command failed"
 
+        # Allow event propagation to MPU
         time.sleep(0.5)
 
+        # Verify MCU state is consistent
+        someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
+                                                GET_STATUS_METHOD))
+        status = recv_method_response(someip_socket)
+        assert status["return_code"] == 0x00
+        assert status["payload"][0] == 0x01, "MCU must report Locked"
+
         mpu_proc = two_process_env["mpu"]
-        assert mpu_proc.poll() is None, "MPU process crashed"
+        assert mpu_proc.poll() is None, "MPU process crashed after event"
 
     def test_full_lock_unlock_cycle(self, someip_socket, two_process_env):
         """Full lock -> unlock -> lock cycle should work with both processes."""
@@ -203,14 +216,23 @@ class TestTwoProcessIntegration:
 
     def test_processes_survive_rapid_commands(self, someip_socket,
                                               two_process_env):
-        """Rapid lock/unlock should not crash either process."""
+        """Rapid lock/unlock should not crash either process and leave
+        the door in a deterministic final state (unlocked)."""
         for _ in range(10):
             someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                     LOCK_METHOD))
-            recv_method_response(someip_socket)
+            resp = recv_method_response(someip_socket)
+            assert resp["return_code"] == 0x00
             someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                     UNLOCK_METHOD))
-            recv_method_response(someip_socket)
+            resp = recv_method_response(someip_socket)
+            assert resp["return_code"] == 0x00
+
+        # Final state must be Unlocked (last command was UNLOCK)
+        someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
+                                                GET_STATUS_METHOD))
+        status = recv_method_response(someip_socket)
+        assert status["payload"][0] == 0x00, "Final state must be Unlocked"
 
         assert two_process_env["mcu"].poll() is None, "MCU crashed"
         assert two_process_env["mpu"].poll() is None, "MPU crashed"

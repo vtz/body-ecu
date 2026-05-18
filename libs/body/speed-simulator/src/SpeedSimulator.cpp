@@ -39,6 +39,10 @@ void SpeedSimulator::init() {
     timer_id_ = timer_.startPeriodic(config_.update_interval_ms,
                                      [this]() { onTimerTick(); });
 
+    if (timer_id_ == ports::kInvalidTimerId) {
+        printk("[speed_sim] FAULT: periodic timer allocation failed\n");
+    }
+
     printk("[speed_sim] Initialized (interval=%ums, max=%d km/h)\n",
            config_.update_interval_ms,
            static_cast<int>(config_.max_speed_kmh));
@@ -98,6 +102,10 @@ void SpeedSimulator::onTimerTick() {
     }
 
     int32_t raw = adc_.read(config_.adc_channel);
+    if (raw < 0) {
+        // ADC read failure — hold last known speed rather than driving to 0
+        return;
+    }
     int32_t clamped = std::clamp(raw, 0, 4095);
 
     if (clamped < config_.adc_dead_zone) {
