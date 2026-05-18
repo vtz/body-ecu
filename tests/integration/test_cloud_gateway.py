@@ -179,6 +179,7 @@ class TestCloudGatewayStub:
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 GET_STATUS_METHOD))
         status = recv_method_response(someip_socket)
+        assert status["return_code"] == 0x00, "GetStatus must succeed"
         assert status["payload"][0] == 0x01, "MCU must report Locked"
 
         assert cloud_gateway_env["mpu"].poll() is None, \
@@ -203,6 +204,7 @@ class TestCloudGatewayStub:
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 GET_STATUS_METHOD))
         status = recv_method_response(someip_socket)
+        assert status["return_code"] == 0x00, "GetStatus must succeed"
         assert status["payload"][0] == 0x00, "MCU must report Unlocked"
 
         assert cloud_gateway_env["mpu"].poll() is None, \
@@ -227,6 +229,7 @@ class TestCloudGatewayStub:
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 GET_STATUS_METHOD))
         status = recv_method_response(someip_socket)
+        assert status["return_code"] == 0x00, "GetStatus must succeed"
         assert status["payload"][0] == 0x00, "Final state must be Unlocked"
 
         assert cloud_gateway_env["mcu"].poll() is None, "MCU crashed"

@@ -167,6 +167,21 @@ TEST(NatsWildcardTest, GreaterThanMatchesTail) {
     EXPECT_TRUE(NatsCloudTransportAdapter::subjectMatchesPattern("a.>", "a.b.c.d"));
 }
 
+TEST_F(NatsCloudTransportAdapterStubTest, OverlappingWildcardsDispatchToAll) {
+    adapter_.connect();
+
+    int calls = 0;
+    adapter_.subscribe("vehicles.*.command.door.lock",
+                       [&](const std::string&,
+                           const std::vector<uint8_t>&) { ++calls; });
+    adapter_.subscribe("vehicles.>",
+                       [&](const std::string&,
+                           const std::vector<uint8_t>&) { ++calls; });
+
+    adapter_.dispatchMessage("vehicles.VIN123.command.door.lock", {0x01});
+    EXPECT_EQ(calls, 2) << "Both overlapping wildcard subscriptions must fire";
+}
+
 TEST(NatsWildcardTest, NoMatchDifferentSubject) {
     EXPECT_FALSE(NatsCloudTransportAdapter::subjectMatchesPattern("a.b.c", "a.b.d"));
     EXPECT_FALSE(NatsCloudTransportAdapter::subjectMatchesPattern("a.b", "a.b.c"));

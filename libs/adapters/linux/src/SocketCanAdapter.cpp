@@ -92,7 +92,10 @@ bool SocketCanAdapter::send(const ports::CanFrame& frame) {
 }
 
 void SocketCanAdapter::addRxCallback(ports::CanRxCallback callback) {
-    rx_callbacks_.push_back(std::move(callback));
+    {
+        std::lock_guard<std::mutex> lock(rx_mutex_);
+        rx_callbacks_.push_back(std::move(callback));
+    }
 
     if (!running_ && fd_ >= 0) {
         running_ = true;
@@ -109,14 +112,20 @@ void SocketCanAdapter::rxLoop() {
             if (running_) std::perror("[SocketCAN] read");
             break;
         }
-        if (nbytes == sizeof(cf) && !rx_callbacks_.empty()) {
+        if (nbytes == sizeof(cf)) {
             ports::CanFrame pf;
             pf.id = cf.can_id & CAN_EFF_MASK;
             uint8_t safe_dlc = std::min(cf.can_dlc,
                                         static_cast<__u8>(sizeof(pf.data)));
             pf.dlc = safe_dlc;
             std::memcpy(pf.data, cf.data, safe_dlc);
-            for (auto& cb : rx_callbacks_) {
+
+            std::vector<ports::CanRxCallback> cbs;
+            {
+                std::lock_guard<std::mutex> lock(rx_mutex_);
+                cbs = rx_callbacks_;
+            }
+            for (auto& cb : cbs) {
                 if (cb) cb(pf);
             }
         }

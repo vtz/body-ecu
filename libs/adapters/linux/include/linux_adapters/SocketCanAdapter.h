@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <mutex>
 #include <string>
 #include <thread>
 #include <atomic>
@@ -35,6 +36,7 @@ private:
 
     std::string iface_;
     int fd_{-1};
+    std::mutex rx_mutex_;
     std::vector<ports::CanRxCallback> rx_callbacks_;
     std::atomic<bool> running_{false};
     std::thread rx_thread_;

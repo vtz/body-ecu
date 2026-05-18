@@ -145,11 +145,17 @@ void NatsCloudTransportAdapter::subscribe(
 
 void NatsCloudTransportAdapter::dispatchMessage(
     const std::string& subject, const std::vector<uint8_t>& data) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    for (auto& [pattern, cb] : subscribers_) {
-        if (subjectMatchesPattern(pattern, subject)) {
-            cb(subject, data);
+    std::vector<ports::CloudMessageCallback> matched;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        for (auto& [pattern, cb] : subscribers_) {
+            if (subjectMatchesPattern(pattern, subject)) {
+                matched.push_back(cb);
+            }
         }
+    }
+    for (auto& cb : matched) {
+        cb(subject, data);
     }
 }
 
@@ -195,11 +201,17 @@ void NatsCloudTransportAdapter::subscribe(
 
 void NatsCloudTransportAdapter::dispatchMessage(
     const std::string& subject, const std::vector<uint8_t>& data) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    for (auto& [pattern, cb] : subscribers_) {
-        if (subjectMatchesPattern(pattern, subject)) {
-            cb(subject, data);
+    std::vector<ports::CloudMessageCallback> matched;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        for (auto& [pattern, cb] : subscribers_) {
+            if (subjectMatchesPattern(pattern, subject)) {
+                matched.push_back(cb);
+            }
         }
+    }
+    for (auto& cb : matched) {
+        cb(subject, data);
     }
 }
 
