@@ -27,22 +27,20 @@
 namespace body_ecu::adapters {
 
 #ifdef __ZEPHYR__
+// Zephyr MCU: cooperative scheduling — no preemptive data races possible
+// within the SOME/IP dispatch path. Use no-op locks to avoid pulling in
+// k_mutex (which has native_sim linker issues) while keeping the POSIX
+// HPC path properly protected.
 class PlatformMutex {
 public:
-    PlatformMutex() { k_mutex_init(&m_); }
-    void lock() { k_mutex_lock(&m_, K_FOREVER); }
-    void unlock() { k_mutex_unlock(&m_); }
-private:
-    k_mutex m_;
+    void lock() {}
+    void unlock() {}
 };
 class PlatformLockGuard {
 public:
-    explicit PlatformLockGuard(PlatformMutex& m) : m_(m) { m_.lock(); }
-    ~PlatformLockGuard() { m_.unlock(); }
+    explicit PlatformLockGuard(PlatformMutex&) {}
     PlatformLockGuard(const PlatformLockGuard&) = delete;
     PlatformLockGuard& operator=(const PlatformLockGuard&) = delete;
-private:
-    PlatformMutex& m_;
 };
 #else
 using PlatformMutex = std::mutex;

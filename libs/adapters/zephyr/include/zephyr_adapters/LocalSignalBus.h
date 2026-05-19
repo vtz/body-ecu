@@ -1,18 +1,21 @@
 #pragma once
 
 #include <map>
-#include <mutex>
 #include <string>
 #include <vector>
+
+#include <zephyr/kernel.h>
 
 #include "ports/ISignalBus.h"
 
 namespace body_ecu::adapters {
 
-/// Lightweight in-process ISignalBus for MCU (Zephyr) and POSIX builds.
-/// Thread-safe: all operations are guarded by a mutex.
+/// Lightweight in-process ISignalBus for MCU (Zephyr) builds.
+/// Thread-safe: all operations are guarded by a k_mutex.
 class LocalSignalBus : public ports::ISignalBus {
 public:
+    LocalSignalBus() { k_mutex_init(&mutex_); }
+
     bool publish(const std::string& path,
                  const ports::SignalValue& value) override;
     void subscribe(const std::string& path,
@@ -21,7 +24,7 @@ public:
         const std::string& path) const override;
 
 private:
-    mutable std::mutex mutex_;
+    mutable struct k_mutex mutex_;
     std::map<std::string, ports::SignalValue> store_;
     std::map<std::string, std::vector<ports::SignalCallback>> subscribers_;
 };
