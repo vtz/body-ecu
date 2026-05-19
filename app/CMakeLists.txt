@@ -104,14 +104,7 @@ set(BODY_ECU_RENODE_RESC_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/../renode/body_ecu_renode_tap.resc
 )
 
-set(BODY_ECU_ARTIFACT_DEPENDENCY_TARGET app)
-if(TARGET zephyr_final)
-    set(BODY_ECU_ARTIFACT_DEPENDENCY_TARGET zephyr_final)
-elseif(TARGET zephyr)
-    set(BODY_ECU_ARTIFACT_DEPENDENCY_TARGET zephyr)
-endif()
-
-add_custom_target(body_ecu_artifacts ALL
+add_custom_target(body_ecu_artifacts
     COMMAND ${CMAKE_COMMAND} -E make_directory ${BODY_ECU_ARTIFACTS_DIR}/firmware
     COMMAND ${CMAKE_COMMAND} -E make_directory ${BODY_ECU_ARTIFACTS_DIR}/renode
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -123,4 +116,3 @@ add_custom_target(body_ecu_artifacts ALL
     COMMENT "Copying body-ecu firmware and Renode scripts to artifacts/"
     VERBATIM
 )
-add_dependencies(body_ecu_artifacts ${BODY_ECU_ARTIFACT_DEPENDENCY_TARGET})
