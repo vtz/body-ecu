@@ -342,11 +342,16 @@ jobs:
       - name: Build
         run: west build -b ${{ matrix.board }} app
 
+      - name: Sanitize board name
+        if: contains(matrix.board, 'nucleo')
+        id: board
+        run: echo "slug=$(echo '${{ matrix.board }}' | tr '/' '-')" >> $GITHUB_OUTPUT
+
       - name: Upload firmware artifact
         if: contains(matrix.board, 'nucleo')
         uses: actions/upload-artifact@v4
         with:
-          name: firmware-${{ matrix.board }}
+          name: firmware-${{ steps.board.outputs.slug }}
           path: build/zephyr/zephyr.*
 
   # Renode smoke test — blocked on reliable Renode install + firmware
