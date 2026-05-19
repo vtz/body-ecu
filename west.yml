@@ -25,7 +25,7 @@ manifest:
 
     - name: openbsw-zephyr
       remote: eclipse-openbsw
-      revision: c1fc544f5a41  # pin to avoid silent breakage from upstream main
+      revision: c1fc544f5a41f4319152fd643c8ff0e3d662806c
       path: modules/openbsw-zephyr
 
     - name: opensomeip
