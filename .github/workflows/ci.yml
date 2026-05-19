@@ -313,7 +313,6 @@ jobs:
     name: "Build: ${{ matrix.board }}"
     runs-on: ${{ matrix.runner }}
     needs: load-matrix
-    continue-on-error: true  # Non-blocking until OpenBSW/Zephyr SDK compat is resolved
     strategy:
       fail-fast: false
       matrix:
