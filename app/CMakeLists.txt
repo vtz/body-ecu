@@ -120,7 +120,7 @@ add_custom_target(body_ecu_artifacts ALL
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
         ${BODY_ECU_RENODE_RESC_FILES}
         ${BODY_ECU_ARTIFACTS_DIR}/renode
-    DEPENDS ${BODY_ECU_ARTIFACT_DEPENDENCY_TARGET}
     COMMENT "Copying body-ecu firmware and Renode scripts to artifacts/"
     VERBATIM
 )
+add_dependencies(body_ecu_artifacts ${BODY_ECU_ARTIFACT_DEPENDENCY_TARGET})
