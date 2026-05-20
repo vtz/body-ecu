@@ -140,6 +140,8 @@ int main(int argc, char* argv[])
         cloud_transport.publish(subject, vin_bytes);
     }
 
+    gateway.publishCurrentState();
+
     adapters::SystemdLifecycleAdapter::notifyReady();
     std::printf("\nBody ECU AutoSD MPU ready. Type 'help' for available commands.\n\n");
 

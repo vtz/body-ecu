@@ -38,6 +38,10 @@ public:
     void init();
     void shutdown();
 
+    /// Publish current state of all signals to NATS so late-joining
+    /// subscribers (e.g. companion app) get the latest values.
+    void publishCurrentState();
+
     bool isConnected() const { return connected_; }
 
 private:
