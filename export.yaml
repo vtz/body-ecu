@@ -15,7 +15,7 @@ export:
   console:
     type: jumpstarter_driver_pyserial.driver.PySerial
     config:
-      url: "/dev/cu.usbmodem1203"
+      url: "/dev/cu.usbmodem1103"
       baudrate: 115200
   someip:
     type: jumpstarter_driver_someip.driver.SomeIp

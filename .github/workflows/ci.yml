@@ -269,7 +269,6 @@ jobs:
         timeout-minutes: 5
 
       - name: Run SOME/IP lighting integration tests
-        continue-on-error: true
         run: |
           pytest tests/integration/test_lighting.py \
             --mcu-bin=build/posix-mcu/body_ecu_posix_mcu \
@@ -278,7 +277,6 @@ jobs:
         timeout-minutes: 3
 
       - name: Run SOME/IP door lock integration tests
-        continue-on-error: true
         run: |
           pytest tests/integration/test_door_lock.py \
             --mcu-bin=build/posix-mcu/body_ecu_posix_mcu \
