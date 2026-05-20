@@ -153,8 +153,6 @@ int main(int argc, char* argv[])
         cloud_transport.publish(subject, vin_bytes);
     }
 
-    gateway.publishCurrentState();
-
     cli.setVinCallback([&gateway](const std::string& vin) {
         gateway.updateVin(vin);
     });
@@ -171,6 +169,8 @@ int main(int argc, char* argv[])
 
     adapters::SystemdLifecycleAdapter::notifyReady();
     std::printf("\nBody ECU AutoSD MPU ready. Type 'help' for available commands.\n\n");
+
+    gateway.publishCurrentState();
 
     cli.start();
 
