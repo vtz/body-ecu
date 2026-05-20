@@ -315,10 +315,14 @@ void SomeIpSystem::on_message_received(
         (void)transport_->send_message(resp_msg, sender);
         SOMEIP_LOG("[SOME/IP] << send response OK\n");
 
+        std::set<::someip::transport::Endpoint> clients_snapshot;
+        {
+            PlatformLockGuard lock(mutex_);
+            clients_snapshot = known_clients_;
+        }
         for (auto& evt : deferred) {
             auto evt_msg = toSomeIp(evt);
-            PlatformLockGuard lock(mutex_);
-            for (const auto& client : known_clients_) {
+            for (const auto& client : clients_snapshot) {
                 (void)transport_->send_message(evt_msg, client);
             }
         }
