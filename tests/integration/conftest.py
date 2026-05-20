@@ -96,6 +96,19 @@ def parse_someip_response(data: bytes) -> dict:
     }
 
 
+MSG_TYPE_RESPONSE = 0x80
+
+
+def recv_method_response(sock, retries=10):
+    """Receive a SOME/IP method response, skipping event notifications."""
+    for _ in range(retries):
+        data = sock.recv(4096)
+        resp = parse_someip_response(data)
+        if resp["message_type"] == MSG_TYPE_RESPONSE:
+            return resp
+    raise TimeoutError("No method response received after skipping events")
+
+
 def _wait_for_someip(host, port, timeout):
     """Block until the SOME/IP server responds on (host, port)."""
     deadline = time.monotonic() + timeout

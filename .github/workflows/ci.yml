@@ -250,6 +250,7 @@ jobs:
           cmake --build build/posix-mpu -j$(nproc)
 
       - name: Install pytest
+        id: install-pytest
         run: pip install pytest
 
       - name: Run two-process integration tests
@@ -269,6 +270,8 @@ jobs:
         timeout-minutes: 5
 
       - name: Run SOME/IP lighting integration tests
+        if: always() && steps.install-pytest.outcome == 'success'
+        id: someip-lighting
         run: |
           pytest tests/integration/test_lighting.py \
             --mcu-bin=build/posix-mcu/body_ecu_posix_mcu \
@@ -277,6 +280,8 @@ jobs:
         timeout-minutes: 3
 
       - name: Run SOME/IP door lock integration tests
+        if: always() && steps.install-pytest.outcome == 'success'
+        id: someip-doorlock
         run: |
           pytest tests/integration/test_door_lock.py \
             --mcu-bin=build/posix-mcu/body_ecu_posix_mcu \

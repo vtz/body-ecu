@@ -8,7 +8,7 @@ import pytest
 import struct
 import time
 
-from conftest import build_someip_request, parse_someip_response
+from conftest import build_someip_request, parse_someip_response, recv_method_response
 
 LIGHTING_SERVICE_ID = 0x1000
 SET_LIGHT_STATE = 0x0001
@@ -25,8 +25,7 @@ class TestLightingService:
         request = build_someip_request(LIGHTING_SERVICE_ID, SET_LIGHT_STATE, payload)
         someip_socket.send(request)
 
-        data = someip_socket.recv(1024)
-        resp = parse_someip_response(data)
+        resp = recv_method_response(someip_socket)
 
         assert resp["service_id"] == LIGHTING_SERVICE_ID
         assert resp["method_id"] == SET_LIGHT_STATE
@@ -35,20 +34,17 @@ class TestLightingService:
 
     def test_get_light_status(self, someip_socket):
         """GetLightStatus should return current state of all lights."""
-        # First set a known state
         set_payload = struct.pack("BB", 0x00, 0x01)  # Headlight ON
         someip_socket.send(
             build_someip_request(LIGHTING_SERVICE_ID, SET_LIGHT_STATE, set_payload))
-        someip_socket.recv(1024)
+        recv_method_response(someip_socket)
 
         time.sleep(0.1)
 
-        # Now query status
         request = build_someip_request(LIGHTING_SERVICE_ID, GET_LIGHT_STATUS)
         someip_socket.send(request)
 
-        data = someip_socket.recv(1024)
-        resp = parse_someip_response(data)
+        resp = recv_method_response(someip_socket)
 
         assert resp["service_id"] == LIGHTING_SERVICE_ID
         assert resp["method_id"] == GET_LIGHT_STATUS
@@ -62,8 +58,7 @@ class TestLightingService:
         request = build_someip_request(LIGHTING_SERVICE_ID, SET_LIGHT_STATE, payload)
         someip_socket.send(request)
 
-        data = someip_socket.recv(1024)
-        resp = parse_someip_response(data)
+        resp = recv_method_response(someip_socket)
 
         assert resp["return_code"] != 0x00  # Should indicate error
 
@@ -73,13 +68,12 @@ class TestLightingService:
             payload = struct.pack("BB", light_id, 0x01)
             someip_socket.send(
                 build_someip_request(LIGHTING_SERVICE_ID, SET_LIGHT_STATE, payload))
-            someip_socket.recv(1024)
+            recv_method_response(someip_socket)
 
         time.sleep(0.1)
 
         request = build_someip_request(LIGHTING_SERVICE_ID, GET_LIGHT_STATUS)
         someip_socket.send(request)
 
-        data = someip_socket.recv(1024)
-        resp = parse_someip_response(data)
+        resp = recv_method_response(someip_socket)
         assert all(b == 0x01 for b in resp["payload"][:3])
