@@ -349,9 +349,18 @@ void Cli::cmdStatus() {
                                 config_.vehicle_info_get_vin_method);
     if (vin_resp.return_code == 0 && !vin_resp.payload.empty()) {
         std::string vin(vin_resp.payload.begin(), vin_resp.payload.end());
-        vin.erase(vin.find_last_not_of('\0') + 1);
-        std::printf("  VIN:       %s\n", vin.c_str());
-        if (vin_callback_) vin_callback_(vin);
+        auto end = vin.find_last_not_of('\0');
+        if (end != std::string::npos) {
+            vin.erase(end + 1);
+        } else {
+            vin.clear();
+        }
+        if (!vin.empty()) {
+            std::printf("  VIN:       %s\n", vin.c_str());
+            if (vin_callback_) vin_callback_(vin);
+        } else {
+            std::printf("  VIN:       (unavailable)\n");
+        }
     } else {
         std::printf("  VIN:       (unavailable)\n");
     }

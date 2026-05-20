@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <mutex>
 
 namespace body_ecu::platform {
 
@@ -12,11 +13,16 @@ CloudGatewayClient::CloudGatewayClient(ports::ICloudTransport& transport,
 
 std::string CloudGatewayClient::resolveSubject(
     const std::string& pattern) const {
+    std::string vin_copy;
+    {
+        std::lock_guard<std::mutex> lock(vin_mutex_);
+        vin_copy = config_.vin;
+    }
     std::string result = pattern;
     const std::string placeholder = "{vin}";
     auto pos = result.find(placeholder);
     if (pos != std::string::npos) {
-        result.replace(pos, placeholder.size(), config_.vin);
+        result.replace(pos, placeholder.size(), vin_copy);
     }
     return result;
 }
@@ -133,9 +139,11 @@ void CloudGatewayClient::publishCurrentState() {
 }
 
 void CloudGatewayClient::updateVin(const std::string& vin) {
-    if (vin.empty() || vin == config_.vin) return;
-
-    config_.vin = vin;
+    {
+        std::lock_guard<std::mutex> lock(vin_mutex_);
+        if (vin.empty() || vin == config_.vin) return;
+        config_.vin = vin;
+    }
 
     if (!connected_) return;
 

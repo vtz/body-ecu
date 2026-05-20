@@ -131,11 +131,19 @@ int main(int argc, char* argv[])
             body_ecu::someip::vehicle_info::kServiceId,
             body_ecu::someip::vehicle_info::method::kGetVin);
         if (vin_resp.return_code == 0 && !vin_resp.payload.empty()) {
-            vin.assign(vin_resp.payload.begin(), vin_resp.payload.end());
-            vin.erase(vin.find_last_not_of('\0') + 1);
-            std::printf("[VIN] Received from MCU: %s (attempt %d)\n",
-                        vin.c_str(), attempt + 1);
-            break;
+            std::string candidate(vin_resp.payload.begin(), vin_resp.payload.end());
+            auto end = candidate.find_last_not_of('\0');
+            if (end != std::string::npos) {
+                candidate.erase(end + 1);
+            } else {
+                candidate.clear();
+            }
+            if (!candidate.empty()) {
+                vin = candidate;
+                std::printf("[VIN] Received from MCU: %s (attempt %d)\n",
+                            vin.c_str(), attempt + 1);
+                break;
+            }
         }
         std::printf("[VIN] MCU not ready, retrying (%d/5)...\n", attempt + 1);
         std::this_thread::sleep_for(std::chrono::seconds(1));

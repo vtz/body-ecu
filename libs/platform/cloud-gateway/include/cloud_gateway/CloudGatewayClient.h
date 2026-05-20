@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -61,6 +62,7 @@ private:
     ports::ICloudTransport& transport_;
     ports::ISignalBus& signal_bus_;
     CloudGatewayConfig config_;
+    mutable std::mutex vin_mutex_;
     bool connected_{false};
 };
 
