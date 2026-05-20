@@ -48,7 +48,7 @@ TEST_F(CanGatewayTest, SomeIpToCanTranslation) {
     });
     EXPECT_CALL(someip_, registerMethod(_, _, _)).Times(testing::AtLeast(1));
     EXPECT_CALL(someip_, registerEvent(_, _, _)).Times(testing::AtLeast(1));
-    EXPECT_CALL(can_, setRxCallback(_)).Times(1);
+    EXPECT_CALL(can_, addRxCallback(_)).Times(1);
 
     gw_.start();
 
@@ -76,7 +76,7 @@ TEST_F(CanGatewayTest, CanToSomeIpTranslation) {
             });
     EXPECT_CALL(someip_, registerMethod(_, _, _)).Times(testing::AtLeast(1));
     EXPECT_CALL(someip_, registerEvent(_, _, _)).Times(testing::AtLeast(1));
-    EXPECT_CALL(can_, setRxCallback(_)).Times(1);
+    EXPECT_CALL(can_, addRxCallback(_)).Times(1);
 
     gw_.start();
 
@@ -97,7 +97,7 @@ TEST_F(CanGatewayTest, UnmappedMessageDrop) {
     EXPECT_CALL(can_, send(_)).Times(0);
     EXPECT_CALL(someip_, registerMethod(_, _, _)).Times(testing::AtLeast(1));
     EXPECT_CALL(someip_, registerEvent(_, _, _)).Times(testing::AtLeast(1));
-    EXPECT_CALL(can_, setRxCallback(_)).Times(1);
+    EXPECT_CALL(can_, addRxCallback(_)).Times(1);
 
     gw_.start();
 
@@ -130,7 +130,7 @@ TEST_F(CanGatewayTest, GatewayLifecycle) {
 
     EXPECT_CALL(someip_, registerMethod(_, _, _)).Times(testing::AtLeast(1));
     EXPECT_CALL(someip_, registerEvent(_, _, _)).Times(testing::AtLeast(1));
-    EXPECT_CALL(can_, setRxCallback(_)).Times(1);
+    EXPECT_CALL(can_, addRxCallback(_)).Times(1);
 
     gw_.start();
     EXPECT_TRUE(gw_.isRunning());
@@ -166,7 +166,7 @@ TEST_F(CanGatewayTest, BidirectionalMapping) {
 
     EXPECT_CALL(bidir_someip, registerMethod(_, _, _)).Times(testing::AtLeast(1));
     EXPECT_CALL(bidir_someip, registerEvent(_, _, _)).Times(testing::AtLeast(1));
-    EXPECT_CALL(bidir_can, setRxCallback(_)).Times(1);
+    EXPECT_CALL(bidir_can, addRxCallback(_)).Times(1);
 
     ports::CanFrame captured_can;
     EXPECT_CALL(bidir_can, send(_)).WillOnce([&](const ports::CanFrame& f) {
@@ -256,7 +256,7 @@ TEST_F(CanGatewayTest, MappingLoadFromConfig) {
 
     EXPECT_CALL(cfg_someip, registerMethod(0x3000, 0x0001, _)).Times(1);
     EXPECT_CALL(cfg_someip, registerEvent(0x3001, 0x8001, 0x0001)).Times(1);
-    EXPECT_CALL(cfg_can, setRxCallback(_)).Times(1);
+    EXPECT_CALL(cfg_can, addRxCallback(_)).Times(1);
 
     cfg_gw.start();
     EXPECT_TRUE(cfg_gw.isRunning());

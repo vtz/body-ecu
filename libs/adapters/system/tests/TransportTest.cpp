@@ -40,8 +40,7 @@ TEST(DoCanTransportTest, SingleFrameRequestDispatch) {
     MockCanBus can;
     DoCanTransport transport(can);
 
-    EXPECT_CALL(can, setRxCallback(_)).WillOnce([&](ports::CanRxCallback cb) {
-        // Simulate an incoming single-frame diagnostic request
+    EXPECT_CALL(can, addRxCallback(_)).WillOnce([&](ports::CanRxCallback cb) {
         ports::CanFrame frame;
         frame.id = DoCanTransport::kDiagRxCanId;  // 0x600
         frame.dlc = 4;
@@ -76,7 +75,7 @@ TEST(DoCanTransportTest, IgnoresNonDiagCanIds) {
     MockCanBus can;
     DoCanTransport transport(can);
 
-    EXPECT_CALL(can, setRxCallback(_)).WillOnce([&](ports::CanRxCallback cb) {
+    EXPECT_CALL(can, addRxCallback(_)).WillOnce([&](ports::CanRxCallback cb) {
         ports::CanFrame frame;
         frame.id = 0x999;  // Not the diagnostic CAN ID
         frame.dlc = 4;
