@@ -26,7 +26,8 @@ class TestDoorLockService:
         """Lock() should transition to Locked state."""
         someip_socket.send(
             build_someip_request(DOOR_LOCK_SERVICE_ID, UNLOCK_METHOD))
-        recv_method_response(someip_socket)
+        pre = recv_method_response(someip_socket)
+        assert pre["return_code"] == 0x00, "Precondition unlock failed"
 
         request = build_someip_request(DOOR_LOCK_SERVICE_ID, LOCK_METHOD)
         someip_socket.send(request)
@@ -41,7 +42,8 @@ class TestDoorLockService:
         """Unlock() should transition to Unlocked state."""
         someip_socket.send(
             build_someip_request(DOOR_LOCK_SERVICE_ID, LOCK_METHOD))
-        recv_method_response(someip_socket)
+        pre = recv_method_response(someip_socket)
+        assert pre["return_code"] == 0x00, "Precondition lock failed"
 
         request = build_someip_request(DOOR_LOCK_SERVICE_ID, UNLOCK_METHOD)
         someip_socket.send(request)
@@ -54,7 +56,8 @@ class TestDoorLockService:
         """GetStatus() should return the current lock state."""
         someip_socket.send(
             build_someip_request(DOOR_LOCK_SERVICE_ID, LOCK_METHOD))
-        recv_method_response(someip_socket)
+        pre = recv_method_response(someip_socket)
+        assert pre["return_code"] == 0x00, "Precondition lock failed"
 
         request = build_someip_request(DOOR_LOCK_SERVICE_ID, GET_STATUS_METHOD)
         someip_socket.send(request)
@@ -68,7 +71,8 @@ class TestDoorLockService:
         """Calling Lock() twice should succeed without error."""
         someip_socket.send(
             build_someip_request(DOOR_LOCK_SERVICE_ID, LOCK_METHOD))
-        recv_method_response(someip_socket)
+        pre = recv_method_response(someip_socket)
+        assert pre["return_code"] == 0x00, "Precondition lock failed"
 
         someip_socket.send(
             build_someip_request(DOOR_LOCK_SERVICE_ID, LOCK_METHOD))
@@ -87,4 +91,5 @@ class TestDoorLockService:
         someip_socket.send(
             build_someip_request(DOOR_LOCK_SERVICE_ID, GET_STATUS_METHOD))
         resp = recv_method_response(someip_socket)
+        assert resp["return_code"] == 0x00, "GetStatus must succeed"
         assert resp["payload"][0] == LOCKED

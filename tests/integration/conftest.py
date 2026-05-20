@@ -115,13 +115,12 @@ def _wait_for_someip(host, port, timeout):
     probe = build_someip_request(0x1001, 0x0003)  # DoorLock GetStatus
     while time.monotonic() < deadline:
         try:
-            sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            sock.settimeout(0.5)
-            sock.sendto(probe, (host, port))
-            sock.recv(1024)
-            sock.close()
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as sock:
+                sock.settimeout(0.5)
+                sock.sendto(probe, (host, port))
+                sock.recv(1024)
             return True
-        except (socket.timeout, OSError):
+        except (TimeoutError, OSError):
             time.sleep(0.2)
     return False
 
@@ -157,6 +156,13 @@ def running_mcu(request):
         out = ""
         if proc.stdout and rc is not None:
             out = proc.stdout.read(4096).decode(errors="replace")
+        if proc.poll() is None:
+            proc.send_signal(signal.SIGTERM)
+            try:
+                proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait()
         pytest.fail(
             f"MCU process did not start in time (rc={rc}, output={out[:500]})")
 

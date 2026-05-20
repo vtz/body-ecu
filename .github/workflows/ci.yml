@@ -348,7 +348,11 @@ jobs:
       - name: Sanitize board name
         if: contains(matrix.board, 'nucleo')
         id: board
-        run: echo "slug=$(echo '${{ matrix.board }}' | tr '/' '-')" >> $GITHUB_OUTPUT
+        env:
+          BOARD_NAME: ${{ matrix.board }}
+        run: |
+          slug="${BOARD_NAME//\//-}"
+          echo "slug=${slug}" >> "$GITHUB_OUTPUT"
 
       - name: Upload firmware artifact
         if: contains(matrix.board, 'nucleo')

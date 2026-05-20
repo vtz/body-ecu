@@ -37,7 +37,8 @@ class TestLightingService:
         set_payload = struct.pack("BB", 0x00, 0x01)  # Headlight ON
         someip_socket.send(
             build_someip_request(LIGHTING_SERVICE_ID, SET_LIGHT_STATE, set_payload))
-        recv_method_response(someip_socket)
+        pre = recv_method_response(someip_socket)
+        assert pre["return_code"] == 0x00, "Precondition SetLightState failed"
 
         time.sleep(0.1)
 
@@ -68,7 +69,8 @@ class TestLightingService:
             payload = struct.pack("BB", light_id, 0x01)
             someip_socket.send(
                 build_someip_request(LIGHTING_SERVICE_ID, SET_LIGHT_STATE, payload))
-            recv_method_response(someip_socket)
+            cmd = recv_method_response(someip_socket)
+            assert cmd["return_code"] == 0x00, f"SetLightState({light_id}) failed"
 
         time.sleep(0.1)
 
@@ -76,4 +78,5 @@ class TestLightingService:
         someip_socket.send(request)
 
         resp = recv_method_response(someip_socket)
+        assert resp["return_code"] == 0x00, "GetLightStatus failed"
         assert all(b == 0x01 for b in resp["payload"][:3])

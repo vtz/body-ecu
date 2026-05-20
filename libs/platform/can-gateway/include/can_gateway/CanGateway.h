@@ -28,6 +28,7 @@ private:
     std::map<uint32_t, const ServiceMapping*> someip_to_can_index_;
     std::map<uint32_t, const ServiceMapping*> can_to_someip_index_;
     bool running_{false};
+    bool rx_registered_{false};
 
     void buildIndices();
     static uint32_t someipKey(uint16_t service_id, uint16_t method_id) {
