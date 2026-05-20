@@ -155,6 +155,10 @@ int main(int argc, char* argv[])
 
     gateway.publishCurrentState();
 
+    cli.setVinCallback([&gateway](const std::string& vin) {
+        gateway.updateVin(vin);
+    });
+
     signal_bus.subscribe("Vehicle.VIN",
         [&gateway, &cloud_transport](const std::string& /*path*/,
                                      const ports::SignalValue& value) {

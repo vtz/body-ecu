@@ -2,7 +2,9 @@
 
 #include <atomic>
 #include <condition_variable>
+#include <functional>
 #include <mutex>
+#include <string>
 #include <thread>
 
 #include "ports/ISomeIpService.h"
@@ -11,6 +13,7 @@
 namespace body_ecu {
 
 using CliConfig = someip::MpuClientConfig;
+using VinCallback = std::function<void(const std::string&)>;
 
 class Cli {
 public:
@@ -21,6 +24,8 @@ public:
     void start();
     void stop();
     bool isRunning() const { return running_; }
+
+    void setVinCallback(VinCallback cb) { vin_callback_ = std::move(cb); }
 
     void registerResponseHandler(uint16_t service_id, uint16_t method_id);
     ports::SomeIpMessage sendRequest(uint16_t service_id, uint16_t method_id,
@@ -46,6 +51,7 @@ private:
     CliConfig config_;
     std::atomic<bool> running_{false};
     std::thread thread_;
+    VinCallback vin_callback_;
 
     std::mutex resp_mutex_;
     std::condition_variable resp_cv_;
