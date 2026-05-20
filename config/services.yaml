@@ -57,6 +57,10 @@ services:
     instance_id: 0x0001
     methods:
       get_vin: 0x0001
+    events:
+      vin_available: 0x8001
+    eventgroups:
+      vehicle_info_events: 0x0001
 
   speed_sensor:
     service_id: 0x1003

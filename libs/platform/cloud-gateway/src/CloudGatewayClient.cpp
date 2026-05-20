@@ -132,6 +132,19 @@ void CloudGatewayClient::publishCurrentState() {
     }
 }
 
+void CloudGatewayClient::updateVin(const std::string& vin) {
+    if (vin.empty() || vin == config_.vin) return;
+
+    config_.vin = vin;
+
+    if (!connected_) return;
+
+    auto subject = "vehicles." + vin + ".info.vin";
+    std::vector<uint8_t> vin_bytes(vin.begin(), vin.end());
+    transport_.publish(subject, vin_bytes);
+    publishCurrentState();
+}
+
 void CloudGatewayClient::shutdown() {
     if (connected_) {
         transport_.disconnect();

@@ -87,6 +87,13 @@ void SomeIpKuksaBridge::onSomeIpEvent(const ports::SomeIpMessage& msg) {
                 signal_bus_.publish(m.signal_path, ports::SignalValue{bitmask});
                 break;
             }
+            case SignalDataType::String: {
+                std::string s(msg.payload.begin(), msg.payload.end());
+                auto nul = s.find('\0');
+                if (nul != std::string::npos) s.erase(nul);
+                signal_bus_.publish(m.signal_path, ports::SignalValue{std::move(s)});
+                break;
+            }
             case SignalDataType::Int32:
             default: {
                 int32_t value = 0;

@@ -102,6 +102,15 @@ int main(int argc, char* argv[])
     light_cmd.someip_method_or_event_id = body_ecu::someip::lighting::method::kSetLightState;
     bridge.addMapping(light_cmd);
 
+    adapters::BridgeMapping vin_event;
+    vin_event.signal_path = "Vehicle.VIN";
+    vin_event.direction = adapters::BridgeDirection::EventToSignal;
+    vin_event.datatype = adapters::SignalDataType::String;
+    vin_event.someip_service_id = body_ecu::someip::vehicle_info::kServiceId;
+    vin_event.someip_method_or_event_id = body_ecu::someip::vehicle_info::event::kVinAvailable;
+    vin_event.someip_eventgroup_id = body_ecu::someip::vehicle_info::eventgroup::kVehicleInfoEvents;
+    bridge.addMapping(vin_event);
+
     signal_bus.connect();
 
     lifecycle::LifecycleManager lm;
@@ -117,15 +126,19 @@ int main(int argc, char* argv[])
                                 body_ecu::someip::vehicle_info::method::kGetVin);
 
     std::string vin = "UNKNOWN";
-    auto vin_resp = cli.sendRequest(
-        body_ecu::someip::vehicle_info::kServiceId,
-        body_ecu::someip::vehicle_info::method::kGetVin);
-    if (vin_resp.return_code == 0 && !vin_resp.payload.empty()) {
-        vin.assign(vin_resp.payload.begin(), vin_resp.payload.end());
-        vin.erase(vin.find_last_not_of('\0') + 1);
-        std::printf("[VIN] Received from MCU: %s\n", vin.c_str());
-    } else {
-        std::printf("[VIN] MCU did not respond, using fallback\n");
+    for (int attempt = 0; attempt < 5; ++attempt) {
+        auto vin_resp = cli.sendRequest(
+            body_ecu::someip::vehicle_info::kServiceId,
+            body_ecu::someip::vehicle_info::method::kGetVin);
+        if (vin_resp.return_code == 0 && !vin_resp.payload.empty()) {
+            vin.assign(vin_resp.payload.begin(), vin_resp.payload.end());
+            vin.erase(vin.find_last_not_of('\0') + 1);
+            std::printf("[VIN] Received from MCU: %s (attempt %d)\n",
+                        vin.c_str(), attempt + 1);
+            break;
+        }
+        std::printf("[VIN] MCU not ready, retrying (%d/5)...\n", attempt + 1);
+        std::this_thread::sleep_for(std::chrono::seconds(1));
     }
 
     platform::CloudGatewayConfig gw_config;
@@ -141,6 +154,16 @@ int main(int argc, char* argv[])
     }
 
     gateway.publishCurrentState();
+
+    signal_bus.subscribe("Vehicle.VIN",
+        [&gateway, &cloud_transport](const std::string& /*path*/,
+                                     const ports::SignalValue& value) {
+            auto* s = std::get_if<std::string>(&value);
+            if (s && !s->empty()) {
+                std::printf("[VIN] MCU published VIN via event: %s\n", s->c_str());
+                gateway.updateVin(*s);
+            }
+        });
 
     adapters::SystemdLifecycleAdapter::notifyReady();
     std::printf("\nBody ECU AutoSD MPU ready. Type 'help' for available commands.\n\n");

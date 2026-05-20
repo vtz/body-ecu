@@ -248,7 +248,11 @@ int main(void)
             }
             return resp;
         });
-    LOG_INF("Registered vehicle_info SOME/IP service (VIN)");
+    someip_system.registerEvent(
+        body_ecu::someip::vehicle_info::kServiceId,
+        body_ecu::someip::vehicle_info::event::kVinAvailable,
+        body_ecu::someip::vehicle_info::eventgroup::kVehicleInfoEvents);
+    LOG_INF("Registered vehicle_info SOME/IP service (VIN + event)");
 
     LOG_INF("CP7: creating DiagnosticsSystem");
     static adapters::DiagnosticsSystem diagnostics;
@@ -369,6 +373,17 @@ int main(void)
     can_adapter.startReceiving();
 #endif
     LOG_INF("Body ECU ready - all systems running");
+
+    {
+        auto vin_data = vehicle_info.readData(adapters::VehicleInfoProvider::kDidVin);
+        if (vin_data) {
+            someip_system.sendEvent(
+                body_ecu::someip::vehicle_info::kServiceId,
+                body_ecu::someip::vehicle_info::event::kVinAvailable,
+                vin_data->data);
+            LOG_INF("Published VIN event via SOME/IP");
+        }
+    }
 
     runtimeMonitor.start();
     AsyncAdapter::run();

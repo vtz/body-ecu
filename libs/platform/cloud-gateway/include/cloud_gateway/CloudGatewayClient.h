@@ -42,6 +42,10 @@ public:
     /// subscribers (e.g. companion app) get the latest values.
     void publishCurrentState();
 
+    /// Update the VIN and re-publish it plus current state to NATS.
+    /// Called when the MCU pushes a VIN event after the HPC has started.
+    void updateVin(const std::string& vin);
+
     bool isConnected() const { return connected_; }
 
 private:
