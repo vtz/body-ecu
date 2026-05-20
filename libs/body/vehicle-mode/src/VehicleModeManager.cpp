@@ -47,7 +47,7 @@ bool VehicleModeManager::isValidTransition(ports::VehicleMode from,
         case M::Run:
             return to == M::Accessory || to == M::Crank;
         case M::Crank:
-            return to == M::Run;
+            return to == M::Run || to == M::Accessory;
     }
     return false;
 }

@@ -29,6 +29,7 @@ private:
 
     ports::ICanBus& can_;
     platform::DiagRequestHandler handler_;
+    bool rx_registered_{false};
 };
 
 }  // namespace body_ecu::adapters

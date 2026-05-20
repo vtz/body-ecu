@@ -253,3 +253,22 @@ TEST_F(SpeedSimulatorTest, CrankModeSpeedIsZero) {
     for (int i = 0; i < 50; ++i) timer_cb_();
     EXPECT_FLOAT_EQ(sim_.getSpeedKmh(), 0.0f);
 }
+
+TEST_F(SpeedSimulatorTest, AdcFailureHoldsLastSpeed) {
+    EXPECT_CALL(adc_, read(_)).WillRepeatedly(Return(4095));
+    EXPECT_CALL(someip_, sendEvent(_, _, _)).Times(testing::AnyNumber());
+
+    for (int i = 0; i < 300; ++i) timer_cb_();
+    float speed_before = sim_.getSpeedKmh();
+    EXPECT_GT(speed_before, 0.0f);
+
+    // ADC starts returning error
+    testing::Mock::VerifyAndClearExpectations(&adc_);
+    testing::Mock::VerifyAndClearExpectations(&someip_);
+    EXPECT_CALL(adc_, read(_)).WillRepeatedly(Return(-1));
+    EXPECT_CALL(someip_, sendEvent(_, _, _)).Times(0);
+
+    for (int i = 0; i < 50; ++i) timer_cb_();
+    EXPECT_FLOAT_EQ(sim_.getSpeedKmh(), speed_before)
+        << "ADC failure must hold last known speed, not drive to zero";
+}

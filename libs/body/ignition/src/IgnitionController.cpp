@@ -42,11 +42,17 @@ void IgnitionController::onButtonPress() {
             printk("[ignition] Accessory -> Crank\n");
             if (mode_manager_.setMode(ports::VehicleMode::Crank)) {
                 cranking_ = true;
-                timer_.startOneShot(config_.crank_duration_ms, [this]() {
+                auto tid = timer_.startOneShot(config_.crank_duration_ms, [this]() {
                     printk("[ignition] Crank -> Run\n");
                     mode_manager_.setMode(ports::VehicleMode::Run);
                     cranking_ = false;
                 });
+                if (tid == ports::kInvalidTimerId) {
+                    printk("[ignition] FAULT: crank timer allocation failed, "
+                           "reverting to Accessory\n");
+                    cranking_ = false;
+                    mode_manager_.setMode(ports::VehicleMode::Accessory);
+                }
             }
             break;
         }

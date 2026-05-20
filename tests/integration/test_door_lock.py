@@ -7,7 +7,7 @@ Run: pytest tests/integration/test_door_lock.py --ecu-host=<ip>
 import pytest
 import struct
 
-from conftest import build_someip_request, parse_someip_response
+from conftest import build_someip_request, parse_someip_response, recv_method_response
 
 DOOR_LOCK_SERVICE_ID = 0x1001
 LOCK_METHOD = 0x0001
@@ -24,17 +24,15 @@ class TestDoorLockService:
 
     def test_lock_door(self, someip_socket):
         """Lock() should transition to Locked state."""
-        # Ensure unlocked first
         someip_socket.send(
             build_someip_request(DOOR_LOCK_SERVICE_ID, UNLOCK_METHOD))
-        someip_socket.recv(1024)
+        pre = recv_method_response(someip_socket)
+        assert pre["return_code"] == 0x00, "Precondition unlock failed"
 
-        # Lock
         request = build_someip_request(DOOR_LOCK_SERVICE_ID, LOCK_METHOD)
         someip_socket.send(request)
 
-        data = someip_socket.recv(1024)
-        resp = parse_someip_response(data)
+        resp = recv_method_response(someip_socket)
 
         assert resp["service_id"] == DOOR_LOCK_SERVICE_ID
         assert resp["method_id"] == LOCK_METHOD
@@ -42,33 +40,29 @@ class TestDoorLockService:
 
     def test_unlock_door(self, someip_socket):
         """Unlock() should transition to Unlocked state."""
-        # Lock first
         someip_socket.send(
             build_someip_request(DOOR_LOCK_SERVICE_ID, LOCK_METHOD))
-        someip_socket.recv(1024)
+        pre = recv_method_response(someip_socket)
+        assert pre["return_code"] == 0x00, "Precondition lock failed"
 
-        # Unlock
         request = build_someip_request(DOOR_LOCK_SERVICE_ID, UNLOCK_METHOD)
         someip_socket.send(request)
 
-        data = someip_socket.recv(1024)
-        resp = parse_someip_response(data)
+        resp = recv_method_response(someip_socket)
 
         assert resp["return_code"] == 0x00
 
     def test_get_status_returns_current_state(self, someip_socket):
         """GetStatus() should return the current lock state."""
-        # Lock
         someip_socket.send(
             build_someip_request(DOOR_LOCK_SERVICE_ID, LOCK_METHOD))
-        someip_socket.recv(1024)
+        pre = recv_method_response(someip_socket)
+        assert pre["return_code"] == 0x00, "Precondition lock failed"
 
-        # Get status
         request = build_someip_request(DOOR_LOCK_SERVICE_ID, GET_STATUS_METHOD)
         someip_socket.send(request)
 
-        data = someip_socket.recv(1024)
-        resp = parse_someip_response(data)
+        resp = recv_method_response(someip_socket)
 
         assert resp["return_code"] == 0x00
         assert resp["payload"][0] == LOCKED
@@ -77,12 +71,12 @@ class TestDoorLockService:
         """Calling Lock() twice should succeed without error."""
         someip_socket.send(
             build_someip_request(DOOR_LOCK_SERVICE_ID, LOCK_METHOD))
-        someip_socket.recv(1024)
+        pre = recv_method_response(someip_socket)
+        assert pre["return_code"] == 0x00, "Precondition lock failed"
 
         someip_socket.send(
             build_someip_request(DOOR_LOCK_SERVICE_ID, LOCK_METHOD))
-        data = someip_socket.recv(1024)
-        resp = parse_someip_response(data)
+        resp = recv_method_response(someip_socket)
 
         assert resp["return_code"] == 0x00
 
@@ -91,13 +85,11 @@ class TestDoorLockService:
         for method in [LOCK_METHOD, UNLOCK_METHOD, LOCK_METHOD]:
             someip_socket.send(
                 build_someip_request(DOOR_LOCK_SERVICE_ID, method))
-            data = someip_socket.recv(1024)
-            resp = parse_someip_response(data)
+            resp = recv_method_response(someip_socket)
             assert resp["return_code"] == 0x00
 
-        # Final state should be Locked
         someip_socket.send(
             build_someip_request(DOOR_LOCK_SERVICE_ID, GET_STATUS_METHOD))
-        data = someip_socket.recv(1024)
-        resp = parse_someip_response(data)
+        resp = recv_method_response(someip_socket)
+        assert resp["return_code"] == 0x00, "GetStatus must succeed"
         assert resp["payload"][0] == LOCKED

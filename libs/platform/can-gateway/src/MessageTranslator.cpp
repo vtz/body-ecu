@@ -7,11 +7,10 @@ namespace body_ecu::platform {
 ports::CanFrame MessageTranslator::someipToCanFrame(
     uint32_t can_id, uint8_t dlc,
     const std::vector<uint8_t>& someip_payload) {
-    ports::CanFrame frame;
+    ports::CanFrame frame{};
     frame.id = can_id;
-    frame.dlc = dlc;
-    auto copy_len = std::min(static_cast<size_t>(dlc), someip_payload.size());
-    copy_len = std::min(copy_len, sizeof(frame.data));
+    frame.dlc = std::min(dlc, static_cast<uint8_t>(sizeof(frame.data)));
+    auto copy_len = std::min(static_cast<size_t>(frame.dlc), someip_payload.size());
     std::copy_n(someip_payload.begin(), copy_len, frame.data);
     return frame;
 }

@@ -21,8 +21,8 @@ ports::TimerId ZephyrTimerService::startPeriodic(
             return static_cast<ports::TimerId>(i);
         }
     }
-    printk("[timer] No free timer slots\n");
-    return static_cast<ports::TimerId>(kMaxTimers);
+    printk("[timer] ERROR: No free timer slots\n");
+    return ports::kInvalidTimerId;
 }
 
 ports::TimerId ZephyrTimerService::startOneShot(
@@ -39,8 +39,8 @@ ports::TimerId ZephyrTimerService::startOneShot(
             return static_cast<ports::TimerId>(i);
         }
     }
-    printk("[timer] No free timer slots\n");
-    return static_cast<ports::TimerId>(kMaxTimers);
+    printk("[timer] ERROR: No free timer slots\n");
+    return ports::kInvalidTimerId;
 }
 
 void ZephyrTimerService::cancel(ports::TimerId id) {

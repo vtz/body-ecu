@@ -27,5 +27,6 @@ notes.md
 *.patch
 *.drawio
 /out_nucleo/
+/out_oci/
 /out_rpm/
 docs/architecture/body-ecu-architecture.png

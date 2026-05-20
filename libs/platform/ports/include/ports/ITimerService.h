@@ -2,11 +2,14 @@
 
 #include <cstdint>
 #include <functional>
+#include <limits>
 
 namespace body_ecu::ports {
 
 using TimerCallback = std::function<void()>;
 using TimerId = uint32_t;
+
+static constexpr TimerId kInvalidTimerId = std::numeric_limits<TimerId>::max();
 
 class ITimerService {
 public:

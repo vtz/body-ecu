@@ -36,9 +36,10 @@ bool CanAdapter::configure(can_mode_t mode) {
 bool CanAdapter::send(const ports::CanFrame& frame) {
     struct can_frame zframe {};
     zframe.id = frame.id;
-    zframe.dlc = frame.dlc;
-    zframe.flags = (frame.dlc > 8) ? CAN_FRAME_FDF : 0;
-    std::memcpy(zframe.data, frame.data, frame.dlc);
+    uint8_t safe_dlc = std::min(frame.dlc, static_cast<uint8_t>(sizeof(zframe.data)));
+    zframe.dlc = safe_dlc;
+    zframe.flags = (safe_dlc > 8) ? CAN_FRAME_FDF : 0;
+    std::memcpy(zframe.data, frame.data, safe_dlc);
 
     int ret = can_send(can_dev_, &zframe, K_MSEC(100), nullptr, nullptr);
     if (ret < 0) {
@@ -48,16 +49,20 @@ bool CanAdapter::send(const ports::CanFrame& frame) {
     return true;
 }
 
-void CanAdapter::setRxCallback(ports::CanRxCallback callback) {
-    rx_callback_ = std::move(callback);
+void CanAdapter::addRxCallback(ports::CanRxCallback callback) {
+    if (filter_id_ >= 0) {
+        LOG_WRN("addRxCallback() called after startReceiving() — ignored");
+        return;
+    }
+    rx_callbacks_.push_back(std::move(callback));
+}
+
+void CanAdapter::startReceiving() {
+    if (filter_id_ >= 0) return;
 
     struct can_filter filter {};
     filter.id = 0;
-    filter.mask = 0;  // Accept all
-
-    if (filter_id_ >= 0) {
-        can_remove_rx_filter(can_dev_, filter_id_);
-    }
+    filter.mask = 0;
 
     filter_id_ = can_add_rx_filter(can_dev_, rxDispatch, this, &filter);
     if (filter_id_ < 0) {
@@ -68,13 +73,17 @@ void CanAdapter::setRxCallback(ports::CanRxCallback callback) {
 void CanAdapter::rxDispatch(const struct device* /*dev*/,
                             struct can_frame* frame, void* user_data) {
     auto* self = static_cast<CanAdapter*>(user_data);
-    if (!self->rx_callback_) return;
+    if (self->rx_callbacks_.empty()) return;
 
     ports::CanFrame pf;
     pf.id = frame->id;
-    pf.dlc = frame->dlc;
-    std::memcpy(pf.data, frame->data, frame->dlc);
-    self->rx_callback_(pf);
+    uint8_t safe_dlc = std::min(frame->dlc, static_cast<uint8_t>(sizeof(pf.data)));
+    pf.dlc = safe_dlc;
+    std::memcpy(pf.data, frame->data, safe_dlc);
+
+    for (auto& cb : self->rx_callbacks_) {
+        if (cb) cb(pf);
+    }
 }
 
 }  // namespace body_ecu::adapters
