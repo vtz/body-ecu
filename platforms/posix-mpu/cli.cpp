@@ -345,6 +345,26 @@ void Cli::cmdSpeed(const char* args) {
 void Cli::cmdStatus() {
     std::printf("--- Vehicle Status ---\n");
 
+    auto vin_resp = sendRequest(config_.vehicle_info_service_id,
+                                config_.vehicle_info_get_vin_method);
+    if (vin_resp.return_code == 0 && !vin_resp.payload.empty()) {
+        std::string vin(vin_resp.payload.begin(), vin_resp.payload.end());
+        auto end = vin.find_last_not_of('\0');
+        if (end != std::string::npos) {
+            vin.erase(end + 1);
+        } else {
+            vin.clear();
+        }
+        if (!vin.empty()) {
+            std::printf("  VIN:       %s\n", vin.c_str());
+            if (vin_callback_) vin_callback_(vin);
+        } else {
+            std::printf("  VIN:       (unavailable)\n");
+        }
+    } else {
+        std::printf("  VIN:       (unavailable)\n");
+    }
+
     auto mode_resp = sendRequest(config_.vehicle_mode_service_id,
                                  config_.vehicle_mode_mode_getter);
     if (mode_resp.return_code == 0 && !mode_resp.payload.empty()) {

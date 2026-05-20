@@ -1,5 +1,6 @@
 #pragma once
 
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -38,6 +39,14 @@ public:
     void init();
     void shutdown();
 
+    /// Publish current state of all signals to NATS so late-joining
+    /// subscribers (e.g. companion app) get the latest values.
+    void publishCurrentState();
+
+    /// Update the VIN and re-publish it plus current state to NATS.
+    /// Called when the MCU pushes a VIN event after the HPC has started.
+    void updateVin(const std::string& vin);
+
     bool isConnected() const { return connected_; }
 
 private:
@@ -53,6 +62,7 @@ private:
     ports::ICloudTransport& transport_;
     ports::ISignalBus& signal_bus_;
     CloudGatewayConfig config_;
+    mutable std::mutex vin_mutex_;
     bool connected_{false};
 };
 
