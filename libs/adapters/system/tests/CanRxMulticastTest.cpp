@@ -38,8 +38,7 @@ protected:
 TEST_F(CanRxMulticastTest, BothReceiveFramesAfterLifecycleInit) {
     std::vector<ports::CanRxCallback> callbacks;
 
-    // Capture all registered RX callbacks (from both setRxCallback calls)
-    EXPECT_CALL(can_, setRxCallback(_))
+    EXPECT_CALL(can_, addRxCallback(_))
         .Times(testing::AtLeast(2))
         .WillRepeatedly([&](ports::CanRxCallback cb) {
             callbacks.push_back(std::move(cb));

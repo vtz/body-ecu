@@ -13,10 +13,10 @@ namespace body_ecu::adapters {
 
 /// Zephyr CAN-FD adapter implementing ICanBus.
 /// Wraps the Zephyr CAN driver API for send/receive with callbacks.
-/// Supports multiple RX listeners via addRxCallback().
-/// Thread-safety: addRxCallback() must only be called during lifecycle init
-/// (before the CAN filter is active). rxDispatch() runs in ISR context and
-/// iterates the callback list without locking.
+///
+/// Usage: register all callbacks via addRxCallback() during init, then call
+/// startReceiving() once. After that point the callback list is frozen and
+/// rxDispatch() iterates it from ISR context without locking.
 class CanAdapter : public ports::ICanBus {
 public:
     explicit CanAdapter(const struct device* can_dev);
@@ -26,8 +26,11 @@ public:
     bool send(const ports::CanFrame& frame) override;
     void addRxCallback(ports::CanRxCallback callback) override;
 
+    /// Install the CAN RX filter after all callbacks are registered.
+    /// Must be called exactly once, after all addRxCallback() calls.
+    void startReceiving();
+
 private:
-    void ensureFilter();
     static void rxDispatch(const struct device* dev,
                            struct can_frame* frame, void* user_data);
 

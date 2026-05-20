@@ -166,7 +166,8 @@ class TestCloudGatewayStub:
         cloud gateway client and the MCU state must reflect the change."""
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 UNLOCK_METHOD))
-        recv_method_response(someip_socket)
+        pre = recv_method_response(someip_socket)
+        assert pre["return_code"] == 0x00, "Precondition unlock failed"
         time.sleep(0.2)
 
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
@@ -191,7 +192,8 @@ class TestCloudGatewayStub:
         must reflect Unlocked."""
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 LOCK_METHOD))
-        recv_method_response(someip_socket)
+        pre = recv_method_response(someip_socket)
+        assert pre["return_code"] == 0x00, "Precondition lock failed"
         time.sleep(0.2)
 
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,

@@ -32,7 +32,7 @@ void CanGateway::start() {
         }
     }
 
-    can_.setRxCallback([this](const ports::CanFrame& frame) {
+    can_.addRxCallback([this](const ports::CanFrame& frame) {
         onCanFrame(frame);
     });
 

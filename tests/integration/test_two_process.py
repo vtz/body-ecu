@@ -153,7 +153,8 @@ class TestTwoProcessIntegration:
         """SOME/IP Lock command to MCU should succeed."""
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 UNLOCK_METHOD))
-        recv_method_response(someip_socket)
+        pre = recv_method_response(someip_socket)
+        assert pre["return_code"] == 0x00, "Precondition unlock failed"
 
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 LOCK_METHOD))
@@ -164,7 +165,8 @@ class TestTwoProcessIntegration:
         """After locking, GetStatus should return Locked."""
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 LOCK_METHOD))
-        recv_method_response(someip_socket)
+        pre = recv_method_response(someip_socket)
+        assert pre["return_code"] == 0x00, "Precondition lock failed"
 
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 GET_STATUS_METHOD))
@@ -180,7 +182,8 @@ class TestTwoProcessIntegration:
         """
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,
                                                 UNLOCK_METHOD))
-        recv_method_response(someip_socket)
+        pre = recv_method_response(someip_socket)
+        assert pre["return_code"] == 0x00, "Precondition unlock failed"
         time.sleep(0.2)
 
         someip_socket.send(build_someip_request(DOOR_LOCK_SERVICE_ID,

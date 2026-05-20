@@ -365,6 +365,9 @@ int main(void)
 
     LOG_INF("Transitioning to run level 3...");
     lifecycleManager.transitionToLevel(MaxNumLevels);
+#ifdef CONFIG_CAN
+    can_adapter.startReceiving();
+#endif
     LOG_INF("Body ECU ready - all systems running");
 
     runtimeMonitor.start();

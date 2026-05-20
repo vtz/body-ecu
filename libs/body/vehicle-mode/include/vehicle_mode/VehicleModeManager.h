@@ -18,9 +18,9 @@ struct VehicleModeConfig {
 };
 
 /// Thread-safety contract: addObserver() must only be called during
-/// initialization (before run). setMode()/getMode() are single-threaded
-/// (main loop or timer callback context). Do not call from multiple threads
-/// concurrently.
+/// initialization (before the lifecycle transitions to run level).
+/// setMode()/getMode() are single-threaded (main loop or timer callback
+/// context). Do not call from multiple threads concurrently.
 class VehicleModeManager {
 public:
     VehicleModeManager(ports::ISomeIpService& someip,
@@ -31,7 +31,8 @@ public:
     ports::VehicleMode getMode() const { return mode_; }
     bool setMode(ports::VehicleMode mode);
 
-    /// Register an observer. Must be called before run() to avoid races.
+    /// Register an observer. Must be called during init, before the
+    /// lifecycle transitions to run level.
     void addObserver(ports::IModeObserver* observer);
 
 private:

@@ -50,11 +50,14 @@ bool CanAdapter::send(const ports::CanFrame& frame) {
 }
 
 void CanAdapter::addRxCallback(ports::CanRxCallback callback) {
+    if (filter_id_ >= 0) {
+        LOG_WRN("addRxCallback() called after startReceiving() — ignored");
+        return;
+    }
     rx_callbacks_.push_back(std::move(callback));
-    ensureFilter();
 }
 
-void CanAdapter::ensureFilter() {
+void CanAdapter::startReceiving() {
     if (filter_id_ >= 0) return;
 
     struct can_filter filter {};
