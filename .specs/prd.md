@@ -517,7 +517,7 @@ POSIX setup is used for faster CI feedback.
 - Zephyr RTOS (pinned revision)
 - Eclipse OpenBSW
 - openbsw-zephyr
-- OpenSOME/IP v0.0.5
+- OpenSOME/IP v0.1.0
 
 ### West Manifest (new)
 

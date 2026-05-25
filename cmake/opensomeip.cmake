@@ -28,7 +28,7 @@ else()
     FetchContent_Declare(
         opensomeip
         GIT_REPOSITORY https://github.com/vtz/opensomeip.git
-        GIT_TAG v0.0.5
+        GIT_TAG v0.1.0
     )
     FetchContent_MakeAvailable(opensomeip)
 endif()
