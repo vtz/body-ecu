@@ -30,7 +30,7 @@ manifest:
 
     - name: opensomeip
       remote: vtz
-      revision: v0.0.5
+      revision: v0.1.0
       path: modules/opensomeip
 
   self:

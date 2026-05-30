@@ -16,6 +16,17 @@ set(BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(SOMEIP_DEV_TOOLS OFF CACHE BOOL "" FORCE)
 
+# v0.1.0+ uses add_library() without STATIC/SHARED, so it follows
+# BUILD_SHARED_LIBS. Force static to avoid link issues in RPM builds
+# where Fedora's %cmake macro sets BUILD_SHARED_LIBS=ON globally.
+if(DEFINED BUILD_SHARED_LIBS)
+    set(_SAVED_BUILD_SHARED_LIBS ${BUILD_SHARED_LIBS})
+    set(_BUILD_SHARED_LIBS_WAS_SET TRUE)
+else()
+    set(_BUILD_SHARED_LIBS_WAS_SET FALSE)
+endif()
+set(BUILD_SHARED_LIBS OFF)
+
 if(OPENSOMEIP_DIR)
     message(STATUS "[opensomeip] Using OPENSOMEIP_DIR=${OPENSOMEIP_DIR}")
     add_subdirectory(${OPENSOMEIP_DIR} ${CMAKE_CURRENT_BINARY_DIR}/_deps/opensomeip)
@@ -28,7 +39,13 @@ else()
     FetchContent_Declare(
         opensomeip
         GIT_REPOSITORY https://github.com/vtz/opensomeip.git
-        GIT_TAG v0.0.5
+        GIT_TAG v0.1.0
     )
     FetchContent_MakeAvailable(opensomeip)
+endif()
+
+if(_BUILD_SHARED_LIBS_WAS_SET)
+    set(BUILD_SHARED_LIBS ${_SAVED_BUILD_SHARED_LIBS})
+else()
+    unset(BUILD_SHARED_LIBS)
 endif()
